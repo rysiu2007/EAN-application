@@ -9,13 +9,41 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-project ("EAN app")
+project ("EAN app" LANGUAGES CXX C ASM_MASM)
 
-# Dodaj źródło do pliku wykonywalnego tego projektu.
-add_executable (CMakeTarget "EAN app.cpp" "EAN app.h")
+add_definitions(-DMPFR_USE_NO_MACRO)
+add_definitions(-DMPFR_USE_INTMAX_T)
+# 1. Znajdź biblioteki w systemie (vcpkg je dostarczy)
+find_package(Boost REQUIRED)
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET CMakeTarget PROPERTY CXX_STANDARD 20)
+find_path(MPFR_INCLUDE_DIR NAMES mpfr.h)
+find_library(MPFR_LIBRARY NAMES mpfr libmpfr)
+
+if(MPFR_INCLUDE_DIR AND MPFR_LIBRARY)
+    set(MPFR_FOUND TRUE)
+    # Tworzymy "udawany" cel (target), żeby reszta Twojego kodu działała bez zmian
+    add_library(MPFR::MPFR UNKNOWN IMPORTED)
+    set_target_properties(MPFR::MPFR PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${MPFR_INCLUDE_DIR}"
+        IMPORTED_LOCATION "${MPFR_LIBRARY}"
+    )
+    message(STATUS "Znaleziono MPFR: ${MPFR_LIBRARY}")
+else()
+    message(FATAL_ERROR "Nie znaleziono MPFR! Sprawdz czy zainstalowales: vcpkg install mpfr:x64-windows")
 endif()
 
-# TODO: Dodaj testy i zainstaluj elementy docelowe w razie potrzeby.
+# 2. Dodaj pliki źródłowe
+add_executable (CMakeTarget "EAN app.cpp" "EAN app.h" "Interval.h" "mpreal.h" "extended_double.h" "extended_double.asm")
+
+# 3. Ustaw standard C++ (skoro planujesz Interval i MPFR, C++20 to dobry wybór)
+set_target_properties(CMakeTarget PROPERTIES 
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
+
+# 4. KLUCZOWE: Połącz biblioteki z Twoim programem
+# To sprawi, że kompilator "zobaczy" nagłówki Boost i MPFR
+target_link_libraries(CMakeTarget PRIVATE 
+    Boost::boost 
+    MPFR::MPFR
+)
