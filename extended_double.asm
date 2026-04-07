@@ -12,8 +12,24 @@ SetX87Rounding proc
 	mov [rsp], ax ;store the modified control word back on the stack
 	fldcw [rsp] ;load the modified control word into the x87 FPU
 	add rsp, 8
+	fwait ; wait for the FPU to complete the control word update
 	ret
 SetX87Rounding endp
+
+SetX87Precision proc
+	sub rsp, 8
+	fnstcw [rsp] ;store the control world on stack
+	mov ax, [rsp] ;load the control word into rax
+	and ax, 0FCFFh ;clear the precision control bits (bits 8 and 9)
+	
+	shl cx, 8 ;shift the desired precision mode into the correct position
+	or ax, cx ;set the new precision mode bits
+	mov [rsp], ax ;store the modified control word back on the stack
+	fldcw [rsp] ;load the modified control word into the x87 FPU
+	add rsp, 8
+	fwait ; wait for the FPU to complete the control word update
+	ret
+SetX87Precision endp
 
 GetX87Rounding proc
 	sub rsp, 8
@@ -24,6 +40,16 @@ GetX87Rounding proc
 	add rsp, 8
 	ret
 GetX87Rounding endp
+
+GetX87Precision proc
+	sub rsp, 8
+	fnstcw [rsp] ;store the control world on stack
+	movzx rax, word ptr [rsp]
+	and ax, 0300h ;mask out all bits except the rounding control bits (bits 10 and 11)
+	shr ax, 8 ;shift the rounding control bits down to the least significant bits
+	add rsp, 8
+	ret
+GetX87Precision endp
 
 ED_FromDouble proc
 	movsd qword ptr [rsp+8], xmm0 ; load the double from memory into st(0)
@@ -41,25 +67,127 @@ ED_ToDouble proc
 ED_ToDouble endp
 
 ED_ToString proc
-	mov rax, [rcx] ; load the extended double from memory into rax
+	mov r13, [rcx] ; load the extended double from memory into rax
 	mov bx, [rcx+8]
-	mov r9, 32
+	mov r9, 45
 	test bx, 8000h ; check the least significant bit of bx to determine if the number is negative
 	jz positive
-	add r9, 13
-	positive:
 	mov [rdx], r9b ; write the sign of the number to the output string (e.g., ' ' for positive, '-' for negative)
+	inc rdx
+	dec r8
+	;add r9, 13
+	positive:
 	test r8, r8 ; check if the output buffer is large enough to hold the string representation
 	jz end_p
 
-	inc rdx
+	and bx, 7FFFh ; clear the sign bit of bx to get the exponent
+	sub bx, 16382 ; adjust the exponent by subtracting the bias (16383 for extended double)
+	mov rax, r13 ; move the significand into rax for manipulation
+	xor r13, r13 ; clear r13 to use it as a temporary register for shifting
+	cmp bx, 0
+	je preloop ; if the exponent is zero, we can skip the shifting and go directly to the loop
+	
+
+	cmp bx, -63
+	jg sec_check ; if the exponent is greater than -64, we need to shift the significand to get the correct value
+	xor rax, rax
+	mov r13, rax
+	jmp preloop
+
+	sec_check:
+
+	movsx rbx, bx ; sign-extend the exponent to 64 bits for comparison
+	cmp bx, 63
+	jl bx_calc ; if the exponent is less than 64, we need to shift the significand to get the correct value
+	mov r13, 66
+	mov [rdx], r13b 
+	jmp end_p
+
+
+
+	bx_calc:
+	cmp bx, 0
+	jl negative_exponent
+        mov cl, bl
+		xor r13, r13
+
+        shld r13, rax, cl    ; Przesuwamy bity w lewo o wyk³adnik
+		shl rax, cl
+		jmp preloop
+    negative_exponent:
+        neg bx
+        mov cl, bl
+		;mov rax, r13
+		xor r13, r13 
+        shrd rax, r13, cl    ; Przesuwamy bity w prawo (robimy miejsce)
+		shr r13, cl
+		;mov rax, 0
+
+	preloop:
+	push rax;1
+	mov rax, r13
+	xor r14, r14
+	mov r12, 10
+	mov r11, rdx
+
+	loop1:
+		xor rdx, rdx ; clear rdx to prepare for the division	xor rdx, rdx
+		div r12 ; divide rax by 10 to get the next digit
+		push rdx ; push the remainder (the next digit) onto the stack 1+r14
+		inc r14 ; increment the digit count
+		test rax, rax ; check if rax is zero, which means we have processed all digits
+		jnz loop1 ; if rax is not zero, continue the loop to process the next digit
+
+	;inc r14
+
+	loop3:
+		pop rdx ; pop the next digit from the stack [1+r14 - r14] or [1+r14 - x]
+		dec r14 ; decrement the digit count
+		add rdx, 48 ; convert the digit to its ASCII character representation
+		test r8, r8 ; check if the output buffer is large enough to hold the string representation
+		jz endloop1
+		mov [r11], dl ; write the digit as a character to the output string
+		dec r8
+		inc r11
+		test r14, r14 ; check if there are more digits to process (if the stack is not empty)
+		jnz loop3 ; if there are more digits, continue the loop
+	;test r13, r13
+	;jnz end_p
+	;push rax
+	;mov rax, r13
+
+	endloop1:
+
+	loop4:
+		test r14,r14 ; check if there are more digits to process (if the stack is not empty)
+		jz preloop2 ; if rax is not zero, continue the loop to process the next digit
+		pop rdx ; pop the next digit from the stack
+		dec r14
+		jmp loop4 ; if there are more digits, continue the loop
+
+	preloop2:
+	pop rax
+	mov r13, 46
+	mov [r11], r13 ; write the decimal point character to the output string
+	inc r11
 	dec r8
 
-		; handle negative numbers if necessary (e.g., by setting a flag or adjusting the string
+	loop2:
+		xor rdx, rdx ; clear rdx to prepare for the divisionxo
+		mul r12 ; multiply rax by 10 to shift the digits to the left
+		;shrd rdx, rax, 3 ; shift the most significant digit into rdx
+		test r8, r8 ; check if the output buffer is large enough to hold the string representation
+		jz end_p
 		
-
-	;rol rax, 1 ; rotate the bits of rax to the left by 1 to prepare for conversion
+		add rdx, 48 ; convert the least significant digit to a character
+		mov [r11], dl ; write the least significant digit as a character to the output string
+		dec r8
+		inc r11
+		jmp loop2 ; repeat the process until all digits have been processed
+	
+	
 	end_p:
+	;pop rax
 	ret
 ED_ToString endp
 
@@ -71,6 +199,78 @@ ED_Add proc
 	ret
 ED_Add endp
 
+ED_Sub proc
+	fld tbyte ptr [rcx] ; load the first double into st(0)
+	fld tbyte ptr [rdx] ; load the second double into st(0), pushing the first one to st(1)
+	fsubp st(1), st(0) ; add st(0) to st(1) and pop the result into st(0)
+	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	ret
+ED_Sub endp
 
+ED_Mul proc
+	fld tbyte ptr [rcx] ; load the first double into st(0)
+	fld tbyte ptr [rdx] ; load the second double into st(0), pushing the first one to st(1)
+	fmulp st(1), st(0) ; multiply st(0) by st(1) and pop the result into st(0)
+	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	ret
+ED_Mul endp
+
+ED_Div proc
+	fld tbyte ptr [rcx] ; load the first double into st(0)
+	fld tbyte ptr [rdx] ; load the second double into st(0), pushing the first one to st(1)
+;	fwait
+	fdivp st(1), st(0) ; divide st(1) by st(0) and pop the result into st(0)
+	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	ret
+ED_Div endp
+
+ED_Mod proc
+	fld tbyte ptr [rdx] ; load the first double into st(0)
+	fld tbyte ptr [rcx] ; load the second double into st(0), pushing the first one to st(1)
+
+	loop_mod:
+		fprem1
+		fstsw ax
+		sahf
+		jp loop_mod ; if the result is not yet the correct remainder, repeat the process
+
+	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	fstp st(0)
+	ret
+
+ED_Mod endp
+
+
+ED_Div_Mod proc
+	fld tbyte ptr [rdx] ; load the first double into st(0)
+	fld tbyte ptr [rcx] ; load the second double into st(0), pushing the first one to st(1)
+	fld st(0)
+
+	loop_mod:
+		fprem1
+		fstsw ax
+		sahf
+		jp loop_mod ; if the result is not yet the correct remainder, repeat the process
+
+	fstp tbyte ptr [r9] ; store the result back to memory and pop st(0)
+	fdivrp; divide st(1) by st(0) and pop the result into st(0)
+	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	ret
+
+ED_Div_Mod endp
+
+ED_Sqrt proc
+	fld tbyte ptr [rcx] ; load the double into st(
+	fsqrt ; compute the square root of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Sqrt endp
+
+ED_Abs proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fabs ; compute the absolute value of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Abs endp
 
 END

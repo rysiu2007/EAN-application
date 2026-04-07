@@ -40,6 +40,9 @@ set_target_properties(CMakeTarget PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g -O0 -Wall)
+endif()
 
 # 4. KLUCZOWE: Połącz biblioteki z Twoim programem
 # To sprawi, że kompilator "zobaczy" nagłówki Boost i MPFR

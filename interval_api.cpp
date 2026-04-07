@@ -3,7 +3,7 @@
 using namespace interval_arithmetic;
 
 extern "C" {
-	void IAdd(const Interval<mpreal>* x, const Interval<mpreal>* y) {
+	void IAdd(const Interval<long double>* x, const Interval<long double>* y) {
 		Interval<double> r;
 		SetRounding<double>(FE_DOWNWARD);
 		r.a = x.a + y.a;
