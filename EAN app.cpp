@@ -30,7 +30,8 @@ int main() {
   //  0xFE, 0x3F };
 	//std::memcpy(ed2.bytes, raw_data2, 10);
     //ED_FromDouble(2.0, &ed2);
-    ED_ToString(&ed2, buffer, 22);
+	ED_Log(&ed2, &ed2);
+    ED_ToString(&ed2, buffer, 23);
     cout << buffer << endl;
 	//ED_FromDouble(0.3, &ed1);
 //	ED_FromDouble(1.5, &ed2);

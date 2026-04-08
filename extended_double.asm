@@ -6,6 +6,7 @@ SetX87Rounding proc
 	mov ax, [rsp] ;load the control word into rax
 	and ax, 0F3FFh ;clear the rounding control bits (bits 10 and 11)
 	
+	and rcx, 3 ; ensure the desired rounding mode is between 0 and 3
 	shl cx, 10 ;shift the desired rounding mode into the correct position
 	or ax, cx ;set the new rounding mode bits
 
@@ -427,5 +428,21 @@ ED_Ceil proc
 	add rsp,8
 	ret
 ED_Ceil endp
+
+ED_Log proc
+	fldln2 ; load the constant log(2) into st(0)
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fyl2x ; compute the logarithm base 2 of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Log endp
+
+ED_Log2 proc
+	fld1 ; load the constant log(2) into st(0)
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fyl2x ; compute the logarithm base 2 of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Log2 endp
 
 END

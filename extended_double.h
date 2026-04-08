@@ -43,4 +43,7 @@ extern "C" {
 	void ED_Floor(const extended_double* a, extended_double* result);
 	void ED_Ceil(const extended_double* a, extended_double* result);
 
+	void ED_Log(const extended_double* a, extended_double* result);
+	void ED_Log2(const extended_double* a, extended_double* result);
+
 }
