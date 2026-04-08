@@ -111,7 +111,7 @@ ED_ToString proc
         mov cl, bl
 		xor r13, r13
 
-        shld r13, rax, cl    ; Przesuwamy bity w lewo o wyk³adnik
+        shld r13, rax, cl    ; Przesuwamy bity w lewo o wykï¿½adnik
 		shl rax, cl
 		jmp preloop
     negative_exponent:
@@ -191,6 +191,126 @@ ED_ToString proc
 	ret
 ED_ToString endp
 
+ED_ToBinaryScientificString proc
+		mov r13, [rcx] ; load the extended double from memory into rax
+	mov bx, [rcx+8]
+	mov r9, 45
+	test bx, 8000h ; check the least significant bit of bx to determine if the number is negative
+	jz positive
+	mov [rdx], r9b ; write the sign of the number to the output string (e.g., ' ' for positive, '-' for negative)
+	inc rdx
+	dec r8
+	;add r9, 13
+	positive:
+	test r8, r8 ; check if the output buffer is large enough to hold the string representation
+	jz end_p
+
+	and bx, 7FFFh ; clear the sign bit of bx to get the exponent
+	sub bx, 16382 ; adjust the exponent by subtracting the bias (16383 for extended double)
+	mov rax, r13 ; move the significand into rax for manipulation
+	mov r14, rbx
+	xor bx,bx
+	xor r13, r13 ; clear r13 to use it as a temporary register for shifting
+	cmp bx, 0
+	je preloop ; if the exponent is zero, we can skip the shifting and go directly to the loop
+	
+
+
+
+
+
+	bx_calc:
+	cmp bx, 0
+	jl negative_exponent
+        mov cl, bl
+		xor r13, r13
+
+        shld r13, rax, cl    ; Przesuwamy bity w lewo o wykï¿½adnik
+		shl rax, cl
+		jmp preloop
+    negative_exponent:
+        neg bx
+        mov cl, bl
+		;mov rax, r13
+		xor r13, r13 
+        shrd rax, r13, cl    ; Przesuwamy bity w prawo (robimy miejsce)
+		shr r13, cl
+		;mov rax, 0
+
+	preloop:
+
+	push rax;1
+	mov rax, r13
+	xor r14, r14
+	mov r12, 10
+	mov r11, rdx
+
+	loop1:
+		xor rdx, rdx ; clear rdx to prepare for the division	xor rdx, rdx
+		div r12 ; divide rax by 10 to get the next digit
+		push rdx ; push the remainder (the next digit) onto the stack 1+r14
+		inc r14 ; increment the digit count
+		test rax, rax ; check if rax is zero, which means we have processed all digits
+		jnz loop1 ; if rax is not zero, continue the loop to process the next digit
+
+	;inc r14
+
+	loop3:
+		pop rdx ; pop the next digit from the stack [1+r14 - r14] or [1+r14 - x]
+		dec r14 ; decrement the digit count
+		add rdx, 48 ; convert the digit to its ASCII character representation
+		test r8, r8 ; check if the output buffer is large enough to hold the string representation
+		jz endloop1
+		mov [r11], dl ; write the digit as a character to the output string
+		dec r8
+		inc r11
+		test r14, r14 ; check if there are more digits to process (if the stack is not empty)
+		jnz loop3 ; if there are more digits, continue the loop
+	;test r13, r13
+	;jnz end_p
+	;push rax
+	;mov rax, r13
+
+	endloop1:
+
+	loop4:
+		test r14,r14 ; check if there are more digits to process (if the stack is not empty)
+		jz preloop2 ; if rax is not zero, continue the loop to process the next digit
+		pop rdx ; pop the next digit from the stack
+		dec r14
+		jmp loop4 ; if there are more digits, continue the loop
+
+	preloop2:
+	pop rax
+	mov r13, 46
+	mov [r11], r13 ; write the decimal point character to the output string
+	inc r11
+	dec r8
+
+	loop2:
+		xor rdx, rdx ; clear rdx to prepare for the divisionxo
+		mul r12 ; multiply rax by 10 to shift the digits to the left
+		;shrd rdx, rax, 3 ; shift the most significant digit into rdx
+		test r8, r8 ; check if the output buffer is large enough to hold the string representation
+		jz end_p
+		
+		add rdx, 48 ; convert the least significant digit to a character
+		mov [r11], dl ; write the least significant digit as a character to the output string
+		dec r8
+		inc r11
+		jmp loop2 ; repeat the process until all digits have been processed
+	
+	
+	end_p:
+
+	;mov [r11]
+
+	;pop rax
+	ret
+
+
+ED_ToBinaryScientificString endp
+
 ED_Add proc
 	fld tbyte ptr [rcx] ; load the first double into st(0)
 	fld tbyte ptr [rdx] ; load the second double into st(0), pushing the first one to st(1)
@@ -244,17 +364,22 @@ ED_Mod endp
 ED_Div_Mod proc
 	fld tbyte ptr [rdx] ; load the first double into st(0)
 	fld tbyte ptr [rcx] ; load the second double into st(0), pushing the first one to st(1)
-	fld st(0)
+	
 
+	sub rsp,8
 	loop_mod:
 		fprem1
 		fstsw ax
+		fwait
 		sahf
 		jp loop_mod ; if the result is not yet the correct remainder, repeat the process
 
 	fstp tbyte ptr [r9] ; store the result back to memory and pop st(0)
+	fld tbyte ptr [rcx] 
+	;fld st(0)
 	fdivrp; divide st(1) by st(0) and pop the result into st(0)
 	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	add rsp,8
 	ret
 
 ED_Div_Mod endp
@@ -272,5 +397,35 @@ ED_Abs proc
 	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
 	ret
 ED_Abs endp
+
+ED_Floor proc
+	sub rsp,8
+	fstcw [rsp]		
+	fld tbyte ptr [rcx]
+	mov rcx, 1
+	call SetX87Rounding
+
+	frndint
+
+	fstp tbyte ptr [rdx]
+	fldcw [rsp]
+	add rsp,8
+	ret
+ED_Floor endp
+
+ED_Ceil proc
+	sub rsp,8
+	fstcw [rsp]		
+	fld tbyte ptr [rcx]
+	mov rcx, 2
+	call SetX87Rounding
+
+	frndint
+
+	fstp tbyte ptr [rdx]
+	fldcw [rsp]
+	add rsp,8
+	ret
+ED_Ceil endp
 
 END
