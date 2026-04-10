@@ -45,5 +45,7 @@ extern "C" {
 
 	void ED_Log(const extended_double* a, extended_double* result);
 	void ED_Log2(const extended_double* a, extended_double* result);
+	void ED_Log10(const extended_double* a, extended_double* result);
+	void ED_LogN(const extended_double* a, const extended_double* n, extended_double* result);
 
 }

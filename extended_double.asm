@@ -445,4 +445,21 @@ ED_Log2 proc
 	ret
 ED_Log2 endp
 
+ED_Log10 proc
+	fldlg2 ; load the constant log(2) into st(0)
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fyl2x ; compute the logarithm base 2 of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Log10 endp
+
+ED_LogN proc
+	
+	
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fyl2x ; compute the logarithm base 2 of st(0) and store the result back in st(0)
+	fstp tbyte ptr [r8] ; store the result back to memory and pop st(0)
+	ret
+ED_LogN endp
+
 END
