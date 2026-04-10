@@ -19,7 +19,7 @@ int main() {
     char buffer[64]{};
     cout << GetX87Rounding() << endl;
 	extended_double ed1, ed2, ed_result, ed_result2;
-    unsigned char raw_data[] = { 0x35, 0xC2, 0x68, 0x21, 0xB2, 0xDA, 0x0F, 0xD0, // Mantysa (E6 = 1110 0110)
+    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Mantysa (E6 = 1110 0110)
     0x01, 0x40 };
     std::memcpy(ed1.bytes, raw_data, 10);
     //ED_FromDouble(5.0, &ed1);
@@ -30,7 +30,7 @@ int main() {
   //  0xFE, 0x3F };
 	//std::memcpy(ed2.bytes, raw_data2, 10);
     //ED_FromDouble(2.0, &ed2);
-	ED_Log10(&ed2, &ed2);
+	ED_LogN(&ed2, &ed1,&ed2);
     ED_ToString(&ed2, buffer, 23);
     cout << buffer << endl;
 	//ED_FromDouble(0.3, &ed1);
