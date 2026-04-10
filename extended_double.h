@@ -14,6 +14,14 @@ struct extended_double {
 #define PREC_DOUBLE 2
 #define PREC_EXTENDED 3
 
+#define ERR_INVALID_OP 1
+#define ERR_ZERO_DIVIDE 2
+#define ERR_DENORMAL 4
+#define ERR_OVERFLOW 8
+#define ERR_UNDERFLOW 16
+#define ERR_PRECISION 32
+
+
 const extended_double pi = { 0x35, 0xC2, 0x68, 0x21, 0xA2, 0xDA, 0x0F, 0xC9, // Mantysa (E6 = 1110 0110)
     0x00, 0x40 };
 
@@ -24,10 +32,14 @@ extern "C" {
 
 	unsigned __int64 GetX87Rounding();
 
+	unsigned __int64 GetX87Errors();
+
 	void ED_FromDouble(double value, extended_double* result);
 	double ED_ToDouble(extended_double* num);
 	void ED_ToString(extended_double* num, char* buffer, int bufferSize);
-	void ED_ToBinaryScientificString(extended_double* num, char* buffer, int bufferSize);
+	void ED_NextMachine(extended_double* num, extended_double* result);
+	void ED_PrevMachine(extended_double* num, extended_double* result);
+//	void ED_ToBinaryScientificString(extended_double* num, char* buffer, int bufferSize);
 
 	void ED_Add(const extended_double* a, const extended_double* b, extended_double* result);
 	void ED_Sub(const extended_double* a, const extended_double* b, extended_double* result);
@@ -48,4 +60,15 @@ extern "C" {
 	void ED_Log10(const extended_double* a, extended_double* result);
 	void ED_LogN(const extended_double* a, const extended_double* n, extended_double* result);
 
+	void ED_Exp2(const extended_double* a, extended_double* result);
+	void ED_Exp(const extended_double* a, extended_double* result);
+	void ED_Exp10(const extended_double* a, extended_double* result);
+
+	void ED_Pow(const extended_double* base, const extended_double* exponent, extended_double* result);
+
+	void ED_Sin(const extended_double* a, extended_double* result);
+	void ED_Cos(const extended_double* a, extended_double* result);
+	void ED_Tan(const extended_double* a, extended_double* result);
+	void ED_SinCos(const extended_double* a, extended_double* s, extended_double* c);
+	//void ED_Atan(const extended_double* a, extended_double* result);
 }

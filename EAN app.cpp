@@ -7,9 +7,116 @@
 
 using namespace std;
 
+void RunPancernyBenchmark() {
+    extended_double ed1, ed2, res, res_up, res_down, pi;
+    char buf[100]{};
+
+    // 1. Ładowanie stałych
+    ED_FromDouble(6.0, &ed1);
+    // Tutaj najlepiej byłoby mieć ED_LoadPi, ale użyjemy FromDouble dla testu
+    ED_FromDouble(3.14159265358979323846, &pi);
+
+    cout << "--- BENCHMARK BIBLIOTEKI ED ---" << endl;
+
+    // TEST 1: Sinus i Cosinus (Jedynka trygonometryczna)
+    // sin^2(5) + cos^2(5) powinno dać dokładnie 1.0
+    extended_double s, c, s2, c2, unit;
+    ED_SinCos(&ed1, &s, &c);
+    ED_Mul(&s, &s, &s2);
+    ED_Mul(&c, &c, &c2);
+    ED_Add(&s2, &c2, &unit);
+    ED_ToString(&unit, buf, 25);
+    cout << "1. Jedynka trygonometryczna sin^2(5)+cos^2(5): " << buf << endl;
+
+    // TEST 2: Separacja przedziałowa (Dzielenie pi/5)
+    // Sprawdzamy, czy tryby zaokrąglania faktycznie "rozszczepiają" wynik
+    SetX87Rounding(RD_DOWNWARD); // Musisz mieć zdefiniowane te stałe zgodnie z ASM
+    ED_Div(&pi, &ed1, &res_down);
+
+    SetX87Rounding(RD_UPWARD);
+    ED_Div(&pi, &ed1, &res_up);
+
+    cout << "2. Dzielenie pi/5 (Przedzial):" << endl;
+    ED_ToString(&res_down, buf, 30); cout << "   DOWN: " << buf << endl;
+    ED_ToString(&res_up, buf, 30);   cout << "   UP:   " << buf << endl;
+
+    // TEST 3: Logarytm i Exp (Tożsamość)
+    // exp(log(5)) powinno wrócić do 5
+    ED_Log(&ed1, &res);
+    ED_Exp(&res, &res);
+    ED_ToString(&res, buf, 30);
+    cout << "3. Tozsamosc exp(log(5)): " << buf << endl;
+
+    // TEST 4: Maszynowa rozdzielczosc (ULP Gap)
+    // Sprawdzamy najmniejszy mozliwy skok wokół liczby pi
+    extended_double next_pi, prev_pi;
+    ED_NextMachine(&pi, &next_pi);
+    ED_PrevMachine(&pi, &prev_pi);
+
+    cout << "4. Rozdzielczosc bitowa wokol PI:" << endl;
+    ED_ToString(&pi, buf, 25);      cout << "   PI:   " << buf << endl;
+    ED_ToString(&next_pi, buf, 25); cout << "   NEXT: " << buf << endl;
+    ED_ToString(&prev_pi, buf, 25); cout << "   PREV: " << buf << endl;
+
+    // TEST 5: Potegowanie ekstremalne (pi^pi)
+    ED_Pow(&pi, &pi, &res);
+    ED_ToString(&res, buf, 40);
+    cout << "5. Potegowanie pi^pi: " << buf << endl;
+}
+
+void Benchmark_Sinus_Interval() {
+    extended_double pi2=pi, x, sin_low, sin_high, temp;
+    char buf[100]{};
+    const int precision = 22;
+
+    // Stała PI (lepiej użyć fldpi w ASM, jeśli masz taką metodę)
+  //  ED_FromDouble(3.14159265358979323846, &pi);
+
+    // x = pi / 6
+    extended_double six;
+    ED_FromDouble(6.0, &six);
+    ED_Div(&pi2, &six, &x);
+
+    cout << "--- BENCHMARK: SINUS PRZEDZIALOWY (x = pi/6) ---" << endl;
+    ED_ToString(&x, buf, precision);
+    cout << "Argument x: " << buf << endl << endl;
+
+    // 1. Obliczenie dolnej granicy
+    SetX87Rounding(RD_DOWNWARD); // upewnij się, że RD_DOWNWARD odpowiada 0x0400 w Control Word
+    ED_Sin(&x, &sin_low);
+
+    // 2. Obliczenie górnej granicy + Twoja poprawka bezpieczeństwa (+1 ULP)
+    SetX87Rounding(RD_UPWARD);   // RD_UPWARD odpowiada 0x0800
+    ED_Sin(&x, &sin_high);
+    ED_NextMachine(&sin_high, &temp); // Defensywne popchnięcie góry
+    sin_high = temp;
+
+    // 3. Wypisanie wyników
+    ED_ToString(&sin_low, buf, precision);
+    cout << "SIN(x) DOWN: " << buf << endl;
+
+    ED_ToString(&sin_high, buf, precision);
+    cout << "SIN(x) UP:   " << buf << endl;
+
+    // 4. Obliczenie szerokości przedziału (niepewności maszynowej)
+    extended_double diff;
+    ED_Sub(&sin_high, &sin_low, &diff);
+    ED_ToString(&diff, buf, precision);
+    cout << "Szerokosc przedzialu: " << buf << endl;
+
+    // 5. Powrót do domyślnego zaokrąglania (Nearest)
+    SetX87Rounding(0x0000);
+
+    cout << "-----------------------------------------------" << endl;
+    cout << "Wniosek: Prawdziwy wynik matematyczny (0.5) " << endl;
+    cout << "musi znajdowac sie wewnatrz powyzszego przedzialu." << endl;
+}
+
 //using namespace interval_arithmetic;
 
 int main() {
+
+	Benchmark_Sinus_Interval();
 
 	SetX87Precision(PREC_EXTENDED);
   //  std::cout<<std::fixed<<std::setprecision(20);
@@ -19,9 +126,13 @@ int main() {
     char buffer[64]{};
     cout << GetX87Rounding() << endl;
 	extended_double ed1, ed2, ed_result, ed_result2;
-    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Mantysa (E6 = 1110 0110)
+    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, // Mantysa (E6 = 1110 0110)
     0x01, 0x40 };
     std::memcpy(ed1.bytes, raw_data, 10);
+
+   ED_PrevMachine(&ed1, &ed1);
+   // ED_PrevMachine(&ed1, &ed1);
+   // ED_PrevMachine(&ed1, &ed1);
     //ED_FromDouble(5.0, &ed1);
     ED_ToString(&ed1, buffer, 22);
     cout << buffer << endl;
@@ -30,29 +141,43 @@ int main() {
   //  0xFE, 0x3F };
 	//std::memcpy(ed2.bytes, raw_data2, 10);
     //ED_FromDouble(2.0, &ed2);
-	ED_LogN(&ed2, &ed1,&ed2);
-    ED_ToString(&ed2, buffer, 23);
+
+
+    SetX87Rounding(RD_UPWARD);
+    ED_Tan(&ed1, &ed1);
+	//ED_Mul(&ed2, &ed1, &ed2);
+	ED_Pow(&ed2,&ed1,&ed2);
+	ED_Mul(&ed2, &pi, &ed2);
+    ED_Mul(&ed2, &pi, &ed2);
+    ED_Mul(&ed2, &pi, &ed2);
+    ED_ToString(&ed2, buffer, 40);
+    cout << buffer << endl;
+ //   std::memcpy(ed1.bytes, ed2.bytes, 10);
+
+	ED_PrevMachine(&ed2, &ed2);
+
+    ED_ToString(&ed2, buffer, 40);
     cout << buffer << endl;
 	//ED_FromDouble(0.3, &ed1);
 //	ED_FromDouble(1.5, &ed2);
-    SetX87Rounding(RD_DOWNWARD);
+
 	ED_Div_Mod(&ed1, &ed2, &ed_result,&ed_result2);
 //	cout<<ED_ToDouble(&ed_result)<<endl;
-	ED_ToString(&ed_result, buffer, 22);
-	cout << buffer << endl;
+	ED_ToString(&ed_result, buffer, 25);
+	cout <<"1: " << buffer << endl;
 
     ED_ToString(&ed_result2, buffer, 22);
-    cout << buffer << endl;
+    cout << "2: " << buffer << endl;
 
     SetX87Rounding(RD_UPWARD);
     ED_Div_Mod(&ed1, &ed2, &ed_result, &ed_result2);
-    ED_Floor(&ed_result, &ed_result);
+   //ED_Ceil(&ed_result, &ed_result);
     //	cout<<ED_ToDouble(&ed_result)<<endl;
     ED_ToString(&ed_result, buffer, 22);
-    cout << buffer << endl;
+    cout << "3: " << buffer << endl;
 
     ED_ToString(&ed_result2, buffer, 22);
-    cout << buffer << endl;
+    cout << "4: " << buffer << endl;
     // try {
     //     // 1. Inicjalizacja (ważne dla MPFR!)
     //     Interval<double>::Initialize();

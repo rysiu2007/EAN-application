@@ -52,6 +52,13 @@ GetX87Precision proc
 	ret
 GetX87Precision endp
 
+GetX87Errors proc
+	fnstsw ax
+	and ax, 3Fh
+	ret
+
+GetX87Errors endp
+
 ED_FromDouble proc
 	movsd qword ptr [rsp+8], xmm0 ; load the double from memory into st(0)
 	fld qword ptr [rsp+8] ; load the double into st(0)
@@ -312,6 +319,34 @@ ED_ToBinaryScientificString proc
 
 ED_ToBinaryScientificString endp
 
+ED_NextMachine proc
+	mov rax, qword ptr [rcx]
+	mov bx, word ptr [rcx+8]
+	inc rax
+	jnc store
+	mov rax, 8000000000000000h
+	inc bx
+	store:
+	mov qword ptr [rdx], rax
+	mov word ptr [rdx+8], bx
+	ret
+ED_NextMachine endp
+
+ED_PrevMachine proc
+	mov rax, qword ptr [rcx]
+	mov bx, word ptr [rcx+8]
+	dec rax
+	mov r8, 8000000000000000h
+	test rax, r8
+    jnz store
+	mov rax, 0FFFFFFFFFFFFFFFFh
+	dec bx
+	store:
+	mov qword ptr [rdx], rax
+	mov word ptr [rdx+8], bx
+	ret
+ED_PrevMachine endp
+
 ED_Add proc
 	fld tbyte ptr [rcx] ; load the first double into st(0)
 	fld tbyte ptr [rdx] ; load the second double into st(0), pushing the first one to st(1)
@@ -465,4 +500,113 @@ ED_LogN proc
 	ret
 ED_LogN endp
 
+ED_Exp2 proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fld st(0) ; duplicate the value in st(0) to st(1) for later use
+	frndint
+	fsub st(1), st(0) ; compute the fractional part of the original value and store it in st(0)
+	fxch
+	f2xm1 ; compute 2^(st(0)) - 1 and store the result back in st(0)
+	fld1 ; load the constant 1 into st(0), pushing the result of f2xm1 to st(1)
+	faddp st(1), st(0) ; add st(0) to st(1) to get 2^(original value) and pop the result into st(0)
+	fscale ; scale st(0) by 2^(integer part of original value) to get the final result
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	fstp st(0)
+	ret
+ED_Exp2 endp
+
+ED_Exp proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fldl2e ; load the constant log(2) into st(0), pushing the original value to st(1)
+	fmulp
+	fld st(0) ; duplicate the value in st(0) to st(1) for later use
+	frndint
+	fsub st(1), st(0) ; compute the fractional part of the original value and store it in st(0)
+	fxch
+	f2xm1 ; compute 2^(st(0)) - 1 and store the result back in st(0)
+	fld1 ; load the constant 1 into st(0), pushing the result of f2xm1 to st(1)
+	faddp st(1), st(0) ; add st(0) to st(1) to get 2^(original value) and pop the result into st(0)
+	fscale ; scale st(0) by 2^(integer part of original value) to get the final result
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	fstp st(0)
+	ret
+ED_Exp endp
+
+ED_Exp10 proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fldl2t ; load the constant log(2) into st(0), pushing the original value to st(1)
+	fmulp
+	fld st(0) ; duplicate the value in st(0) to st(1) for later use
+	frndint
+	fsub st(1), st(0) ; compute the fractional part of the original value and store it in st(0)
+	fxch
+	f2xm1 ; compute 2^(st(0)) - 1 and store the result back in st(0)
+	fld1 ; load the constant 1 into st(0), pushing the result of f2xm1 to st(1)
+	faddp st(1), st(0) ; add st(0) to st(1) to get 2^(original value) and pop the result into st(0)
+	fscale ; scale st(0) by 2^(integer part of original value) to get the final result
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	fstp st(0)
+	ret
+ED_Exp10 endp
+
+ED_Pow proc
+	sub rsp, 72
+
+	mov [rsp+56], rdx
+	mov [rsp+48], r8
+	lea rdx, [rsp+32] ; reserve space on the stack for the result of the logarithm calculation
+
+	call ED_Log2 ; compute the logarithm base 2 of the base and store the result in r8
+	mov r10, [rsp+48] ; move the result of the logarithm calculation into r8 for later use
+	mov r11, [rsp+56] ; move the exponent into r9 for later use
+	lea r12, [rsp+32] ; move the result of the logarithm calculation into r12 for later use]
+	fld tbyte ptr [r11] ; load the exponent into st(0)] ; take the absolute value of the exponent to handle negative powers
+	fld tbyte ptr [r12] ; load the result of the logarithm calculation into st(0)
+	fmulp
+	fld st(0) ; duplicate the value in st(0) to st(1) for later use
+	frndint
+	fsub st(1), st(0) ; compute the fractional part of the original value and store it in st(0)
+	fxch
+	f2xm1 ; compute 2^(st(0)) - 1 and store the result back in st(0)
+	fld1 ; load the constant 1 into st(0), pushing the result of f2xm1 to st(1)
+	faddp st(1), st(0) ; add st(0) to st(1) to get 2^(original value) and pop the result into st(0)
+	fscale ; scale st(0) by 2^(integer part of original value) to get the final result
+	fstp tbyte ptr [r10] ; store the result back to memory and pop st(0)
+	fstp st(0)
+
+
+	add rsp, 72
+	ret
+ED_Pow endp
+
+ED_Sin proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fsin ; compute the sine of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Sin endp
+
+ED_Cos proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fcos ; compute the cosine of st(0) and store the result back in st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+	ret
+ED_Cos endp
+
+ED_Tan proc
+	fld tbyte ptr [rcx] ; load the double into st(0)
+	fptan ; compute the tangent of st(0) and store the result back in st(0)
+	fstp st(0)
+	fstp tbyte ptr [rdx] ; store the result back to memory and pop st(0)
+ ; pop the extra value left by fptan
+	ret
+ED_Tan endp
+
+ED_SinCos proc
+    fld tbyte ptr [rcx]  ; załaduj kąt (radiany)
+    fsincos              ; st(0) = cos, st(1) = sin
+    fstp tbyte ptr [r8]  ; zapisz cos (r8 to trzeci argument w x64)
+    fstp tbyte ptr [rdx] ; zapisz sin (rdx to drugi argument)
+    ret
+ED_SinCos endp
 END
