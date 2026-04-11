@@ -64,7 +64,10 @@ extern "C" {
 	void ED_Exp(const extended_double* a, extended_double* result);
 	void ED_Exp10(const extended_double* a, extended_double* result);
 
+	// Works only for positive bases
 	void ED_Pow(const extended_double* base, const extended_double* exponent, extended_double* result);
+	// Exponentiation for whole numbers, working in Z 
+	void ED_Pow_Int(const extended_double* base, const extended_double* exponent, extended_double* result);
 
 	void ED_Sin(const extended_double* a, extended_double* result);
 	void ED_Cos(const extended_double* a, extended_double* result);

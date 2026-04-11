@@ -579,6 +579,37 @@ ED_Pow proc
 	ret
 ED_Pow endp
 
+ED_Pow_Int proc
+	sub rsp, 16	
+
+	fld tbyte ptr [rdx]
+	fabs
+	fisttp qword ptr [rsp]
+	fld tbyte ptr [rcx]
+	fld1
+	mov r11, [rsp]
+	loop5:
+		test r11, r11
+		jz fines
+		fmul st(0), st(1)
+		dec r11
+		jmp loop5
+
+	fines:
+	mov r10b, byte ptr [rdx+9]
+	test r10b, 80h
+	jz fines2
+	fld1
+	fdivrp st(1), st(0)
+
+	fines2:
+	fstp tbyte ptr [r8]
+	fstp st(0)
+
+	add rsp, 16
+	ret
+ED_Pow_Int endp
+
 ED_Sin proc
 	fld tbyte ptr [rcx] ; load the double into st(0)
 	fsin ; compute the sine of st(0) and store the result back in st(0)

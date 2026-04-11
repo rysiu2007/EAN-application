@@ -33,7 +33,7 @@ find_library(MPFR_LIBRARY NAMES mpfr libmpfr)
 #endif()
 
 # 2. Dodaj pliki źródłowe
-add_executable (CMakeTarget "EAN app.cpp" "EAN app.h" "Interval.h" "mpreal.h" "extended_double.h" "extended_double.asm")
+add_executable (CMakeTarget "EAN app.cpp" "EAN app.h" "Interval.h" "mpreal.h" "extended_double.h" "extended_double.asm" "intervals.h")
 
 # 3. Ustaw standard C++ (skoro planujesz Interval i MPFR, C++20 to dobry wybór)
 set_target_properties(CMakeTarget PROPERTIES 

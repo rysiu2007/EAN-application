@@ -65,7 +65,9 @@ void RunPancernyBenchmark() {
 }
 
 void Benchmark_Sinus_Interval() {
-    extended_double pi2=pi, x, sin_low, sin_high, temp;
+    extended_double pi2=pi,pi_high, x, sin_low, sin_high, temp;
+
+	ED_NextMachine(&pi2, &pi_high); // Pi z góry (defensywnie)
     char buf[100]{};
     const int precision = 22;
 
@@ -74,8 +76,16 @@ void Benchmark_Sinus_Interval() {
 
     // x = pi / 6
     extended_double six;
-    ED_FromDouble(6.0, &six);
-    ED_Div(&pi2, &six, &x);
+    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, // Mantysa (E6 = 1110 0110)
+0x01, 0x40 };
+    std::memcpy(six.bytes, raw_data, 10);
+
+    extended_double six_low;
+	extended_double six_high;
+
+	ED_PrevMachine(&six, &six_low);
+
+
 
     cout << "--- BENCHMARK: SINUS PRZEDZIALOWY (x = pi/6) ---" << endl;
     ED_ToString(&x, buf, precision);
@@ -83,10 +93,12 @@ void Benchmark_Sinus_Interval() {
 
     // 1. Obliczenie dolnej granicy
     SetX87Rounding(RD_DOWNWARD); // upewnij się, że RD_DOWNWARD odpowiada 0x0400 w Control Word
+    ED_Div(&pi2, &six_low, &x);
     ED_Sin(&x, &sin_low);
 
     // 2. Obliczenie górnej granicy + Twoja poprawka bezpieczeństwa (+1 ULP)
     SetX87Rounding(RD_UPWARD);   // RD_UPWARD odpowiada 0x0800
+    ED_Div(&pi_high, &six, &x);
     ED_Sin(&x, &sin_high);
     ED_NextMachine(&sin_high, &temp); // Defensywne popchnięcie góry
     sin_high = temp;
@@ -126,14 +138,18 @@ int main() {
     char buffer[64]{};
     cout << GetX87Rounding() << endl;
 	extended_double ed1, ed2, ed_result, ed_result2;
-    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, // Mantysa (E6 = 1110 0110)
-    0x01, 0x40 };
+    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, // Mantysa (E6 = 1110 0110)
+0x01, 0xC0 };
     std::memcpy(ed1.bytes, raw_data, 10);
-
-   ED_PrevMachine(&ed1, &ed1);
+    unsigned char raw_data3[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, // Mantysa (E6 = 1110 0110)
+0x00, 0x40 };
+    std::memcpy(ed2.bytes, raw_data3, 10);
+	//ed1 = pi;
+  // ED_PrevMachine(&ed1, &ed1);
    // ED_PrevMachine(&ed1, &ed1);
    // ED_PrevMachine(&ed1, &ed1);
     //ED_FromDouble(5.0, &ed1);
+    ED_Pow_Int(&ed1, &ed2, &ed1);
     ED_ToString(&ed1, buffer, 22);
     cout << buffer << endl;
     ed2 = pi;
