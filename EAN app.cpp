@@ -65,7 +65,7 @@ void RunPancernyBenchmark() {
 }
 
 void Benchmark_Sinus_Interval() {
-    extended_double pi2=pi,pi_high, x, sin_low, sin_high, temp;
+    extended_double pi2=pi,pi_high, x, sin_low, sin_high, temp, two;
 
 	ED_NextMachine(&pi2, &pi_high); // Pi z góry (defensywnie)
     char buf[100]{};
@@ -76,9 +76,12 @@ void Benchmark_Sinus_Interval() {
 
     // x = pi / 6
     extended_double six;
-    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, // Mantysa (E6 = 1110 0110)
+    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, // Mantysa (E6 = 1110 0110)
 0x01, 0x40 };
+    unsigned char raw_data2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Mantysa (E6 = 1110 0110)
+0x00, 0x40 };
     std::memcpy(six.bytes, raw_data, 10);
+    std::memcpy(two.bytes, raw_data2, 10);
 
     extended_double six_low;
 	extended_double six_high;
@@ -110,6 +113,11 @@ void Benchmark_Sinus_Interval() {
     ED_ToString(&sin_high, buf, precision);
     cout << "SIN(x) UP:   " << buf << endl;
 
+	SetX87Rounding(RD_TONEAREST); // Przywrócenie domyślnego zaokrąglania
+	ED_Add(&sin_low, &sin_high, &temp);
+	ED_Div(&temp, &two, &temp);
+    ED_ToString(&temp, buf, precision);
+    cout << "Średnia przedzialu: " << buf << endl;
     // 4. Obliczenie szerokości przedziału (niepewności maszynowej)
     extended_double diff;
     ED_Sub(&sin_high, &sin_low, &diff);
