@@ -137,7 +137,7 @@ void VerifyIntervalPrecision() {
     // 1. Przygotowanie danych (1/3 * 3)
     // 1/3 w formacie 80-bit: FD 3F + AA AA AA AA AA AA AA AA (przybliżone)
     extended_double one_third;
-    unsigned char ot_data[] = { 0xAB, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xFD, 0x3F };
+    unsigned char ot_data[] = { 0xAB, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xDA, 0xFD, 0x3F };
     memcpy(one_third.bytes, ot_data, 10);
 
     // 3.0 w formacie 80-bit: 00 40 + C0 00 00 00 00 00 00 00

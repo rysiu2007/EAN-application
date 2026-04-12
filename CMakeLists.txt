@@ -32,8 +32,15 @@ find_library(MPFR_LIBRARY NAMES mpfr libmpfr)
 #    message(FATAL_ERROR "Nie znaleziono MPFR! Sprawdz czy zainstalowales: vcpkg install mpfr:x64-windows")
 #endif()
 
+set(SOURCES
+    "source/EAN app.cpp"
+    "source/extended_double.asm"
+    "source/intervals.asm"
+)
+
+
 # 2. Dodaj pliki źródłowe
-add_executable (CMakeTarget "EAN app.cpp" "EAN app.h" "Interval.h" "mpreal.h" "extended_double.h" "extended_double.asm" "intervals.h" "intervals.asm")
+add_executable (CMakeTarget ${SOURCES})
 
 # 3. Ustaw standard C++ (skoro planujesz Interval i MPFR, C++20 to dobry wybór)
 set_target_properties(CMakeTarget PROPERTIES 
@@ -44,6 +51,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-g -O0 -Wall)
 endif()
 
+target_include_directories(CMakeTarget PUBLIC include)
 # 4. KLUCZOWE: Połącz biblioteki z Twoim programem
 # To sprawi, że kompilator "zobaczy" nagłówki Boost i MPFR
 target_link_libraries(CMakeTarget PRIVATE 
