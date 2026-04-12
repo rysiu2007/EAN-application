@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+Interval.h linguist-vendored
+mpreal.h linguist-vendored
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
