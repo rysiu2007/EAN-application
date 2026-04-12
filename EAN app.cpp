@@ -1,11 +1,63 @@
 ﻿// EAN app.cpp: definiuje punkt wejścia dla aplikacji.
 //
 
+
 #include "EAN app.h"
 //#include "Interval.h"
 #include "extended_double.h"
+#include "intervals.h"
 
 using namespace std;
+
+void Benchmark_Interval_SineSquared() {
+    const int iterations = 1000000; // 1 milion operacji
+    interval x, temp, res;
+
+    // Ustawiamy x = [pi/7, pi/7] (bardzo wąski przedział)
+    extended_double val_pi_7;
+    extended_double seven;
+    double d_seven = 7.0;
+    ED_FromDouble(d_seven, &seven);
+
+    // pi / 7
+    SetX87Rounding(RD_TONEAREST);
+    ED_Div(&pi, &seven, &val_pi_7);
+
+    x.low = val_pi_7;
+    x.high = val_pi_7;
+
+    std::cout << "Rozpoczynam benchmark: sin(x^2) dla " << iterations << " iteracji..." << std::endl;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < iterations; ++i) {
+        // Obliczamy x^2 (używając Int_op2 i ED_Mul)
+        Int_op2(&x, &x, &temp, ED_Mul);
+
+        // Obliczamy sin(temp) (używając Int_op i ED_Sin)
+        Int_op1(&temp, &res, ED_Sin);
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+
+    // Wyświetlanie wyników
+    char bufL[64]{}, bufH[64]{};
+    ED_ToString(&res.low, bufL, 32);
+    ED_ToString(&res.high, bufH, 32);
+
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "------------------------------------------" << std::endl;
+    std::cout << "Czas wykonania: " << elapsed.count() << " s" << std::endl;
+    std::cout << "Szybkosc:       " << (iterations / elapsed.count()) / 1000.0 << " kops/s" << std::endl;
+    std::cout << "------------------------------------------" << std::endl;
+    std::cout << "Wynik ostatniej iteracji:" << std::endl;
+    std::cout << "LOW:  " << bufL << std::endl;
+    std::cout << "HIGH: " << bufH << std::endl;
+
+    // Prosta weryfikacja szerokości
+    // (Możesz tu dodać funkcję obliczającą różnicę, jeśli masz ED_Sub)
+}
 
 void RunPancernyBenchmark() {
     extended_double ed1, ed2, res, res_up, res_down, pi;
@@ -136,7 +188,7 @@ void Benchmark_Sinus_Interval() {
 
 int main() {
 
-	Benchmark_Sinus_Interval();
+	Benchmark_Interval_SineSquared();
 
 	SetX87Precision(PREC_EXTENDED);
   //  std::cout<<std::fixed<<std::setprecision(20);

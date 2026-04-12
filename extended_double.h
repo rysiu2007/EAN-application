@@ -26,34 +26,53 @@ const extended_double pi = { 0x35, 0xC2, 0x68, 0x21, 0xA2, 0xDA, 0x0F, 0xC9, // 
     0x00, 0x40 };
 
 extern "C" {
-    // Ta nazwa musi by� identyczna z nazw� w pliku .asm
+	// Sets the x87 FPU rounding mode. The mode parameter should be one of the RD_* constants defined above. Note that this function directly modifies the x87 FPU control word, so it will affect all subsequent floating-point operations performed using the x87 FPU until the rounding mode is changed again. Use with caution, especially in multi-threaded applications, as it may lead to unexpected behavior if other parts of the program rely on a specific rounding mode.
     void SetX87Rounding(unsigned __int64 mode);
+	// Sets the x87 FPU precision mode. The precision parameter should be one of the PREC_* constants defined above.
 	void SetX87Precision(unsigned __int64 precision);
 
+	// Retrieves the current x87 FPU rounding mode. The return value will be one of the RD_* constants defined above.
 	unsigned __int64 GetX87Rounding();
 
+	// Retrieves the current x87 FPU precision mode. The return value will be one of the PREC_* constants defined above.
+	unsigned __int64 GetX87Precision();
+
+	// Retrieves the current x87 FPU error flags. The return value will be a combination of the ERR_* constants defined above.
 	unsigned __int64 GetX87Errors();
 
+	// Sets the extended_double pointed to by result to the value represented by the double value.
 	void ED_FromDouble(double value, extended_double* result);
+	// Exports the value of the extended_double pointed to by num as a double. Note that this may involve rounding and loss of precision.
 	double ED_ToDouble(extended_double* num);
+	// Parses the num into a string in buffer, with a size limited by bufferSize. Note that this implementation is limited and may not handle all edge cases correctly, such as very large or very small numbers, or special values like infinity or NaN.
 	void ED_ToString(extended_double* num, char* buffer, int bufferSize);
+	// Returns the next machine number after num
 	void ED_NextMachine(extended_double* num, extended_double* result);
+	// Returns the previous machine number before num
 	void ED_PrevMachine(extended_double* num, extended_double* result);
 //	void ED_ToBinaryScientificString(extended_double* num, char* buffer, int bufferSize);
+
+	// Basic arithmetic operations
 
 	void ED_Add(const extended_double* a, const extended_double* b, extended_double* result);
 	void ED_Sub(const extended_double* a, const extended_double* b, extended_double* result);
 	void ED_Mul(const extended_double* a, const extended_double* b, extended_double* result);
 	void ED_Div(const extended_double* a, const extended_double* b, extended_double* result);
 	void ED_Mod(const extended_double* a, const extended_double* b, extended_double* result);
+
+	// Performs both division and modulus operations simultaneously, storing the quotient in divResult and the remainder in modResult. This can be more efficient than performing the two operations separately, as it may allow for shared calculations.
 	void ED_Div_Mod(const extended_double* a, const extended_double* b, extended_double* divResult, extended_double* modResult);
 
-	void ED_Sqrt(const extended_double* a, extended_double* result);
+	// Unary operations
 
+	void ED_Sqrt(const extended_double* a, extended_double* result);
 	void ED_Abs(const extended_double* a, extended_double* result);
 
 	void ED_Floor(const extended_double* a, extended_double* result);
 	void ED_Ceil(const extended_double* a, extended_double* result);
+
+	// Logarithmic and exponential functions, note that there is no error handling for invalid inputs (like negative numbers for logarithms), so the behavior in those cases is undefined and may cause crashes or incorrect results. Use with caution.
+	// Should one use GetX87Errors() after calling these functions to check for errors like ERR_INVALID_OP or ERR_ZERO_DIVIDE
 
 	void ED_Log(const extended_double* a, extended_double* result);
 	void ED_Log2(const extended_double* a, extended_double* result);
@@ -64,10 +83,13 @@ extern "C" {
 	void ED_Exp(const extended_double* a, extended_double* result);
 	void ED_Exp10(const extended_double* a, extended_double* result);
 
-	// Works only for positive bases
+	// Power function. Works only with positive bases
 	void ED_Pow(const extended_double* base, const extended_double* exponent, extended_double* result);
-	// Exponentiation for whole numbers, working in Z 
+
+	// Exponentiation for the whole numbers, working in Z 
 	void ED_Pow_Int(const extended_double* base, const extended_double* exponent, extended_double* result);
+
+	// Trigonometric functions, note that there is no error handling for invalid inputs (like NaN or infinity), so the behavior in those cases is undefined and may cause crashes or incorrect results. Use with caution.
 
 	void ED_Sin(const extended_double* a, extended_double* result);
 	void ED_Cos(const extended_double* a, extended_double* result);

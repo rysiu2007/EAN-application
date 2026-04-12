@@ -1,4 +1,6 @@
 .code
+
+
 SetX87Rounding proc
 	sub rsp, 8
 	fnstcw [rsp] ;store the control world on stack
