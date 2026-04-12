@@ -59,62 +59,6 @@ void Benchmark_Interval_SineSquared() {
     // (Możesz tu dodać funkcję obliczającą różnicę, jeśli masz ED_Sub)
 }
 
-void RunPancernyBenchmark() {
-    extended_double ed1, ed2, res, res_up, res_down, pi;
-    char buf[100]{};
-
-    // 1. Ładowanie stałych
-    ED_FromDouble(6.0, &ed1);
-    // Tutaj najlepiej byłoby mieć ED_LoadPi, ale użyjemy FromDouble dla testu
-    ED_FromDouble(3.14159265358979323846, &pi);
-
-    cout << "--- BENCHMARK BIBLIOTEKI ED ---" << endl;
-
-    // TEST 1: Sinus i Cosinus (Jedynka trygonometryczna)
-    // sin^2(5) + cos^2(5) powinno dać dokładnie 1.0
-    extended_double s, c, s2, c2, unit;
-    ED_SinCos(&ed1, &s, &c);
-    ED_Mul(&s, &s, &s2);
-    ED_Mul(&c, &c, &c2);
-    ED_Add(&s2, &c2, &unit);
-    ED_ToString(&unit, buf, 25);
-    cout << "1. Jedynka trygonometryczna sin^2(5)+cos^2(5): " << buf << endl;
-
-    // TEST 2: Separacja przedziałowa (Dzielenie pi/5)
-    // Sprawdzamy, czy tryby zaokrąglania faktycznie "rozszczepiają" wynik
-    SetX87Rounding(RD_DOWNWARD); // Musisz mieć zdefiniowane te stałe zgodnie z ASM
-    ED_Div(&pi, &ed1, &res_down);
-
-    SetX87Rounding(RD_UPWARD);
-    ED_Div(&pi, &ed1, &res_up);
-
-    cout << "2. Dzielenie pi/5 (Przedzial):" << endl;
-    ED_ToString(&res_down, buf, 30); cout << "   DOWN: " << buf << endl;
-    ED_ToString(&res_up, buf, 30);   cout << "   UP:   " << buf << endl;
-
-    // TEST 3: Logarytm i Exp (Tożsamość)
-    // exp(log(5)) powinno wrócić do 5
-    ED_Log(&ed1, &res);
-    ED_Exp(&res, &res);
-    ED_ToString(&res, buf, 30);
-    cout << "3. Tozsamosc exp(log(5)): " << buf << endl;
-
-    // TEST 4: Maszynowa rozdzielczosc (ULP Gap)
-    // Sprawdzamy najmniejszy mozliwy skok wokół liczby pi
-    extended_double next_pi, prev_pi;
-    ED_NextMachine(&pi, &next_pi);
-    ED_PrevMachine(&pi, &prev_pi);
-
-    cout << "4. Rozdzielczosc bitowa wokol PI:" << endl;
-    ED_ToString(&pi, buf, 25);      cout << "   PI:   " << buf << endl;
-    ED_ToString(&next_pi, buf, 25); cout << "   NEXT: " << buf << endl;
-    ED_ToString(&prev_pi, buf, 25); cout << "   PREV: " << buf << endl;
-
-    // TEST 5: Potegowanie ekstremalne (pi^pi)
-    ED_Pow(&pi, &pi, &res);
-    ED_ToString(&res, buf, 40);
-    cout << "5. Potegowanie pi^pi: " << buf << endl;
-}
 
 void Benchmark_Sinus_Interval() {
     extended_double pi2=pi,pi_high, x, sin_low, sin_high, temp, two;
@@ -184,13 +128,75 @@ void Benchmark_Sinus_Interval() {
     cout << "musi znajdowac sie wewnatrz powyzszego przedzialu." << endl;
 }
 
+
+void VerifyIntervalPrecision() {
+    cout << "=====================================================" << endl;
+    cout << "   DIAGNOSTYKA PRECYZJI I ZAOKRAGLEN (Int_Mul)      " << endl;
+    cout << "=====================================================" << endl;
+
+    // 1. Przygotowanie danych (1/3 * 3)
+    // 1/3 w formacie 80-bit: FD 3F + AA AA AA AA AA AA AA AA (przybliżone)
+    extended_double one_third;
+    unsigned char ot_data[] = { 0xAB, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xFD, 0x3F };
+    memcpy(one_third.bytes, ot_data, 10);
+
+    // 3.0 w formacie 80-bit: 00 40 + C0 00 00 00 00 00 00 00
+    extended_double three;
+    unsigned char t_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x40 };
+    memcpy(three.bytes, t_data, 10);
+
+    interval A = { one_third, one_third };
+    interval B = { three, three };
+    interval R;
+
+    // 2. Wywołanie Twojego ASM
+    Int_Mul(&A, &B, &R);
+
+    // 3. Wyświetlanie wyników
+    char buf[100]{};
+    const int precision = 22;
+
+    cout << fixed << setprecision(precision);
+
+    // --- Dolna granica ---
+    ED_ToString(&R.low, buf, precision);
+    cout << "Wynik LOW:  " << buf << endl;
+    cout << "  HEX: ";
+    for (int i = 9; i >= 0; i--) printf("%02X ", R.low.bytes[i]);
+    cout << endl << endl;
+
+    // --- Górna granica ---
+    ED_ToString(&R.high, buf, precision);
+    cout << "Wynik HIGH: " << buf << endl;
+    cout << "  HEX: ";
+    for (int i = 9; i >= 0; i--) printf("%02X ", R.high.bytes[i]);
+    cout << endl << endl;
+
+    // 4. Analiza bitowa
+    bool identical = true;
+    for (int i = 0; i < 10; i++) {
+        if (R.low.bytes[i] != R.high.bytes[i]) identical = false;
+    }
+
+    if (identical) {
+        cout << "[!] ALARM: Granice sa identyczne bitowo." << endl;
+        cout << "    Sprawdz, czy ED_Mul nie resetuje FPU Control Word (finit/fldcw)." << endl;
+    }
+    else {
+        cout << "[+] SUKCES: Granice roznia sie bitowo." << endl;
+        cout << "    Arytmetyka przedzialowa poprawnie rozszerza boki." << endl;
+    }
+    cout << "=====================================================" << endl;
+}
 //using namespace interval_arithmetic;
 
 int main() {
 
-	Benchmark_Interval_SineSquared();
 
 	SetX87Precision(PREC_EXTENDED);
+
+
+    VerifyIntervalPrecision();
   //  std::cout<<std::fixed<<std::setprecision(20);
     SetX87Rounding(RD_DOWNWARD);
 	cout << GetX87Rounding() << endl;
