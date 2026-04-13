@@ -31,5 +31,6 @@ extern "C" {
 	void Int_Add(const interval* a, const interval* b, interval* r);
 	void Int_Sub(const interval* a, const interval* b, interval* r);
 	void Int_Mul(const interval* a, const interval* b, interval* r);
+	void Int_Div(const interval* a, const interval* b, interval* r);
 
 }

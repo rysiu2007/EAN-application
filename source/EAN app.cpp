@@ -127,7 +127,61 @@ void Benchmark_Sinus_Interval() {
     cout << "Wniosek: Prawdziwy wynik matematyczny (0.5) " << endl;
     cout << "musi znajdowac sie wewnatrz powyzszego przedzialu." << endl;
 }
+void PrintResult(interval& res) {
+    char bufferLow[128]{};
+    char bufferHigh[128]{};
 
+    // Konwersja na stringi przy użyciu Twojej biblioteki
+    ED_ToString(&res.low, bufferLow, 64);
+    ED_ToString(&res.high, bufferHigh, 64);
+
+    std::cout << "  Interval: [ " << bufferLow << " , " << bufferHigh << " ]" << std::endl;
+
+    // Dump bitowy (HEX) - bardzo przydatny przy 80-bitach
+    printf("  HEX Low:  ");
+    for (int i = 9; i >= 0; --i) printf("%02X", res.low.bytes[i]);
+    printf("\n  HEX High: ");
+    for (int i = 9; i >= 0; --i) printf("%02X", res.high.bytes[i]);
+
+    // Poprawiona linia oddzielająca (używamy std::cout dla spójności)
+    std::cout << "\n" << std::string(60, '-') << std::endl;
+}
+const extended_double ED_ONE = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Mantysa
+    0xFF, 0x3F                                      // Wykładnik (Little-Endian: 3F FF)
+};
+
+void RunComprehensiveTests() {
+    interval A, B, R;
+
+    // TEST 1: Kwadrat przedziału ujemnego (Sprawdzenie zamiany granic)
+    // [-3.0, -2.0] * [-3.0, -2.0] = [4.0, 9.0]
+    A.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0 }; // -3.0
+    A.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 }; // -2.0
+    B = A;
+    Int_Mul(&A, &B, &R);
+    printf("TEST: [-3, -2] * [-3, -2]\n");
+    PrintResult(R);
+
+    // TEST 2: Przedziały mieszane (Zawierające zero)
+    // [-2.0, 3.0] * [-4.0, 5.0] = [-15.0, 15.0]
+    A.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 }; // -2.0
+    A.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x40 }; // 3.0
+    B.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0xC0 }; // -4.0
+    B.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x01, 0x40 }; // 5.0
+    Int_Mul(&A, &B, &R);
+    printf("TEST: [-2, 3] * [-4, 5]\n");
+    PrintResult(R);
+
+    // TEST 3: Dzielenie przez przedział ujemny
+    // [1.0, 1.0] / [-3.0, -2.0] = [-0.5, -0.33...]
+    A.low = ED_ONE; A.high = ED_ONE;
+    B.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0 }; // -3.0
+    B.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 }; // -2.0
+    Int_Div(&A, &B, &R); // Zgodnie z Twoim porządkiem argumentów
+    printf("TEST: 1.0 / [-3, -2]\n");
+    PrintResult(R);
+}
 
 void VerifyIntervalPrecision() {
     cout << "=====================================================" << endl;
@@ -192,11 +246,11 @@ void VerifyIntervalPrecision() {
 
 int main() {
 
-
 	SetX87Precision(PREC_EXTENDED);
+    RunComprehensiveTests();
+  //  BitLevelTest_WithToString();
 
-
-    VerifyIntervalPrecision();
+  // VerifyIntervalPrecision();
   //  std::cout<<std::fixed<<std::setprecision(20);
     SetX87Rounding(RD_DOWNWARD);
 	cout << GetX87Rounding() << endl;

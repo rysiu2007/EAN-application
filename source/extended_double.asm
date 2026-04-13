@@ -1,5 +1,6 @@
 .code
 
+PUBLIC ED_NextMachine
 
 SetX87Rounding proc
 	sub rsp, 8
@@ -324,6 +325,9 @@ ED_ToBinaryScientificString endp
 ED_NextMachine proc
 	mov rax, qword ptr [rcx]
 	mov bx, word ptr [rcx+8]
+	test bx, 8000h
+	jnz neg2
+
 	inc rax
 	jnc store
 	mov rax, 8000000000000000h
@@ -332,11 +336,29 @@ ED_NextMachine proc
 	mov qword ptr [rdx], rax
 	mov word ptr [rdx+8], bx
 	ret
+
+	neg2:
+		
+	dec rax
+	mov r8, 8000000000000000h
+	test rax, r8
+    jnz store2
+	mov rax, 0FFFFFFFFFFFFFFFFh
+	dec bx
+	store2:
+	mov qword ptr [rdx], rax
+	mov word ptr [rdx+8], bx
+	ret
+
+
 ED_NextMachine endp
 
 ED_PrevMachine proc
 	mov rax, qword ptr [rcx]
 	mov bx, word ptr [rcx+8]
+	test bx, 8000h
+	jnz neg2
+	
 	dec rax
 	mov r8, 8000000000000000h
 	test rax, r8
@@ -347,6 +369,18 @@ ED_PrevMachine proc
 	mov qword ptr [rdx], rax
 	mov word ptr [rdx+8], bx
 	ret
+
+	neg2:
+	inc rax
+	jnc store2
+	mov rax, 8000000000000000h
+	inc bx
+	store2:
+	mov qword ptr [rdx], rax
+	mov word ptr [rdx+8], bx
+	ret
+
+
 ED_PrevMachine endp
 
 ED_Add proc

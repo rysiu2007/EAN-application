@@ -3,6 +3,8 @@ EXTERN SetX87Rounding : PROC
 EXTERN ED_Add : PROC
 EXTERN ED_Sub : PROC
 EXTERN ED_Mul : PROC
+EXTERN ED_NextMachine : PROC
+EXTERN ED_PrevMachine : PROC
 Int_op3 proc
 	sub rsp, 72
 	mov [rsp+40], rcx
@@ -203,4 +205,59 @@ multiplication:
 	pop rbx
 	ret
 Int_Mul endp
+
+Int_Div proc
+
+	fldz					; checks for 0 in the divisor interval
+	fld tbyte ptr [rdx]
+	fcomip st(0), st(1)
+	ja not_zero
+	fld tbyte ptr [rdx+10]
+	fcomip st(0), st(1)
+	jb not_zero
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 4     
+    fldenv [rsp]                
+    add rsp, 28
+	ret
+
+not_zero:
+	fstp st(0)			;calculating the division
+	sub rsp, 88
+	mov [rsp+52], rcx
+	mov [rsp+60], r8
+	mov [rsp+68], rdx
+	fld1
+	fld tbyte ptr [rdx]
+	mov rcx, 2
+	call SetX87Rounding
+	fdivr st(0), st(1)
+	mov rdx, [rsp+68]
+	fstp tbyte ptr [rsp+42]
+	fld tbyte ptr [rdx+10]
+
+	mov rcx, 1
+	call SetX87Rounding
+	fdivr st(0), st(1)
+	fstp tbyte ptr [rsp+32]
+	lea rcx, [rsp+32]
+	lea rdx, [rsp+32]
+	call ED_PrevMachine
+
+	lea rcx, [rsp+42]
+	lea rdx, [rsp+42]
+	call ED_NextMachine
+	fstp st(0)
+
+	mov rcx, [rsp+52]
+	lea rdx, [rsp+32] ; we wont need the original rdx
+	mov r8, [rsp+60]
+	call Int_Mul
+	add rsp, 88
+	ret
+
+Int_Div endp
 END
