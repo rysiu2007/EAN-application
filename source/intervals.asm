@@ -103,7 +103,8 @@ Int_Sub proc
 	mov [rsp+32], rdx
 	lea rdx, [rsp+40] ; rcx and r8 are untouched and used as arguments for ED_Sub
 
-	call ED_Sub
+	mov r9, ED_Sub
+	call Int_op2
 
 	add rsp, 72
 	ret

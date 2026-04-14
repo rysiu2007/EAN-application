@@ -9,245 +9,179 @@
 
 using namespace std;
 
-void Benchmark_Interval_SineSquared() {
-    const int iterations = 1000000; // 1 milion operacji
-    interval x, temp, res;
+// --- IMPORT WARTOŚCI (80-bit Extended Precision) ---
+const extended_double ED_ZERO = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+const extended_double ED_ONE = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0x3F };
+const extended_double ED_TWO = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x40 };
+const extended_double ED_THREE = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xCC, 0xCC, 0x00, 0x40 };
+const extended_double ED_FOUR = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0x40 };
+const extended_double ED_FIVE = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAA, 0xAA, 0x01, 0x40 };
+const extended_double ED_TEN = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x02, 0x40 };
 
-    // Ustawiamy x = [pi/7, pi/7] (bardzo wąski przedział)
-    extended_double val_pi_7;
-    extended_double seven;
-    double d_seven = 7.0;
-    ED_FromDouble(d_seven, &seven);
+// Wartości ujemne (bit 7 bajtu 9 ustawiony na 1)
+const extended_double ED_NEG_1 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xBF };
+const extended_double ED_NEG_2 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 };
+const extended_double ED_NEG_3 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0 };
+const extended_double ED_NEG_4 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0xC0 };
+const extended_double ED_NEG_5 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x01, 0xC0 };
 
-    // pi / 7
-    SetX87Rounding(RD_TONEAREST);
-    ED_Div(&pi, &seven, &val_pi_7);
+const extended_double ED_TEN_POW_15 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x8E, 0x30, 0x40 };
+const extended_double ED_NEG_10 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x02, 0xC0 };
 
-    x.low = val_pi_7;
-    x.high = val_pi_7;
+void PrintBinary(const std::string& label, interval& res) {
+    char bufL[128]{};
+    char bufH[128]{};
 
-    std::cout << "Rozpoczynam benchmark: sin(x^2) dla " << iterations << " iteracji..." << std::endl;
+    ED_ToString(&res.low, bufL, 40);
+    ED_ToString(&res.high, bufH, 40);
 
-    auto start = std::chrono::high_resolution_clock::now();
+    std::cout << "TEST: " << label << "\n";
+    std::cout << "  Interval: [ " << bufL << " , " << bufH << " ]\n";
 
-    for (int i = 0; i < iterations; ++i) {
-        // Obliczamy x^2 (używając Int_op2 i ED_Mul)
-        Int_op2(&x, &x, &temp, ED_Mul);
-
-        // Obliczamy sin(temp) (używając Int_op i ED_Sin)
-        Int_op1(&temp, &res, ED_Sin);
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-
-    // Wyświetlanie wyników
-    char bufL[64]{}, bufH[64]{};
-    ED_ToString(&res.low, bufL, 32);
-    ED_ToString(&res.high, bufH, 32);
-
-    std::cout << std::fixed << std::setprecision(4);
-    std::cout << "------------------------------------------" << std::endl;
-    std::cout << "Czas wykonania: " << elapsed.count() << " s" << std::endl;
-    std::cout << "Szybkosc:       " << (iterations / elapsed.count()) / 1000.0 << " kops/s" << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
-    std::cout << "Wynik ostatniej iteracji:" << std::endl;
-    std::cout << "LOW:  " << bufL << std::endl;
-    std::cout << "HIGH: " << bufH << std::endl;
-
-    // Prosta weryfikacja szerokości
-    // (Możesz tu dodać funkcję obliczającą różnicę, jeśli masz ED_Sub)
-}
-
-
-void Benchmark_Sinus_Interval() {
-    extended_double pi2=pi,pi_high, x, sin_low, sin_high, temp, two;
-
-	ED_NextMachine(&pi2, &pi_high); // Pi z góry (defensywnie)
-    char buf[100]{};
-    const int precision = 22;
-
-    // Stała PI (lepiej użyć fldpi w ASM, jeśli masz taką metodę)
-  //  ED_FromDouble(3.14159265358979323846, &pi);
-
-    // x = pi / 6
-    extended_double six;
-    unsigned char raw_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE0, // Mantysa (E6 = 1110 0110)
-0x01, 0x40 };
-    unsigned char raw_data2[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Mantysa (E6 = 1110 0110)
-0x00, 0x40 };
-    std::memcpy(six.bytes, raw_data, 10);
-    std::memcpy(two.bytes, raw_data2, 10);
-
-    extended_double six_low;
-	extended_double six_high;
-
-	ED_PrevMachine(&six, &six_low);
-
-
-
-    cout << "--- BENCHMARK: SINUS PRZEDZIALOWY (x = pi/6) ---" << endl;
-    ED_ToString(&x, buf, precision);
-    cout << "Argument x: " << buf << endl << endl;
-
-    // 1. Obliczenie dolnej granicy
-    SetX87Rounding(RD_DOWNWARD); // upewnij się, że RD_DOWNWARD odpowiada 0x0400 w Control Word
-    ED_Div(&pi2, &six_low, &x);
-    ED_Sin(&x, &sin_low);
-
-    // 2. Obliczenie górnej granicy + Twoja poprawka bezpieczeństwa (+1 ULP)
-    SetX87Rounding(RD_UPWARD);   // RD_UPWARD odpowiada 0x0800
-    ED_Div(&pi_high, &six, &x);
-    ED_Sin(&x, &sin_high);
-    ED_NextMachine(&sin_high, &temp); // Defensywne popchnięcie góry
-    sin_high = temp;
-
-    // 3. Wypisanie wyników
-    ED_ToString(&sin_low, buf, precision);
-    cout << "SIN(x) DOWN: " << buf << endl;
-
-    ED_ToString(&sin_high, buf, precision);
-    cout << "SIN(x) UP:   " << buf << endl;
-
-	SetX87Rounding(RD_TONEAREST); // Przywrócenie domyślnego zaokrąglania
-	ED_Add(&sin_low, &sin_high, &temp);
-	ED_Div(&temp, &two, &temp);
-    ED_ToString(&temp, buf, precision);
-    cout << "Średnia przedzialu: " << buf << endl;
-    // 4. Obliczenie szerokości przedziału (niepewności maszynowej)
-    extended_double diff;
-    ED_Sub(&sin_high, &sin_low, &diff);
-    ED_ToString(&diff, buf, precision);
-    cout << "Szerokosc przedzialu: " << buf << endl;
-
-    // 5. Powrót do domyślnego zaokrąglania (Nearest)
-    SetX87Rounding(0x0000);
-
-    cout << "-----------------------------------------------" << endl;
-    cout << "Wniosek: Prawdziwy wynik matematyczny (0.5) " << endl;
-    cout << "musi znajdowac sie wewnatrz powyzszego przedzialu." << endl;
-}
-void PrintResult(interval& res) {
-    char bufferLow[128]{};
-    char bufferHigh[128]{};
-
-    // Konwersja na stringi przy użyciu Twojej biblioteki
-    ED_ToString(&res.low, bufferLow, 64);
-    ED_ToString(&res.high, bufferHigh, 64);
-
-    std::cout << "  Interval: [ " << bufferLow << " , " << bufferHigh << " ]" << std::endl;
-
-    // Dump bitowy (HEX) - bardzo przydatny przy 80-bitach
     printf("  HEX Low:  ");
     for (int i = 9; i >= 0; --i) printf("%02X", res.low.bytes[i]);
     printf("\n  HEX High: ");
     for (int i = 9; i >= 0; --i) printf("%02X", res.high.bytes[i]);
 
-    // Poprawiona linia oddzielająca (używamy std::cout dla spójności)
     std::cout << "\n" << std::string(60, '-') << std::endl;
 }
-const extended_double ED_ONE = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, // Mantysa
-    0xFF, 0x3F                                      // Wykładnik (Little-Endian: 3F FF)
-};
 
-void RunComprehensiveTests() {
+//void PrintBinary(const std::string& label, const interval& res) {
+//    auto dump = [](const extended_double& ed) {
+//        for (int i = 9; i >= 0; --i) printf("%02X", ed.bytes[i]);
+//        };
+//
+//    printf("TEST: %s\n", label.c_str());
+//    printf("  LOW:  "); dump(res.low);  printf("\n");
+//    printf("  HIGH: "); dump(res.high); printf("\n");
+//    printf("------------------------------------------------------------\n");
+//}
+
+void RunAllTests() {
     interval A, B, R;
 
-    // TEST 1: Kwadrat przedziału ujemnego (Sprawdzenie zamiany granic)
-    // [-3.0, -2.0] * [-3.0, -2.0] = [4.0, 9.0]
-    A.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0 }; // -3.0
-    A.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 }; // -2.0
-    B = A;
-    Int_Mul(&A, &B, &R);
-    printf("TEST: [-3, -2] * [-3, -2]\n");
-    PrintResult(R);
+    printf("%-25s | %-20s : %-20s\n", "OPERACJA", "HEX LOW (10B)", "HEX HIGH (10B)");
+    printf("--------------------------------------------------------------------------------------\n");
 
-    // TEST 2: Przedziały mieszane (Zawierające zero)
-    // [-2.0, 3.0] * [-4.0, 5.0] = [-15.0, 15.0]
-    A.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 }; // -2.0
-    A.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x40 }; // 3.0
-    B.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0xC0 }; // -4.0
-    B.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x01, 0x40 }; // 5.0
-    Int_Mul(&A, &B, &R);
-    printf("TEST: [-2, 3] * [-4, 5]\n");
-    PrintResult(R);
-
-    // TEST 3: Dzielenie przez przedział ujemny
-    // [1.0, 1.0] / [-3.0, -2.0] = [-0.5, -0.33...]
+    // --- DODAWANIE ---
+    printf("[ DODAWANIE ]\n");
+    // 1. [1, 1] + [1, 1]
     A.low = ED_ONE; A.high = ED_ONE;
-    B.low = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0xC0 }; // -3.0
-    B.high = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0xC0 }; // -2.0
-    Int_Div(&A, &B, &R); // Zgodnie z Twoim porządkiem argumentów
-    printf("TEST: 1.0 / [-3, -2]\n");
-    PrintResult(R);
-}
+    B.low = ED_ONE; B.high = ED_ONE;
+    Int_Add(&A, &B, &R); PrintBinary("1 + 1", R);
 
-void VerifyIntervalPrecision() {
-    cout << "=====================================================" << endl;
-    cout << "   DIAGNOSTYKA PRECYZJI I ZAOKRAGLEN (Int_Mul)      " << endl;
-    cout << "=====================================================" << endl;
+    // 2. [-5, -4] + [-2, -1]
+    A.low = ED_NEG_5; A.high = ED_NEG_4;
+    B.low = ED_NEG_2; B.high = ED_NEG_1;
+    Int_Add(&A, &B, &R); PrintBinary("[-5,-4] + [-2,-1]", R);
 
-    // 1. Przygotowanie danych (1/3 * 3)
-    // 1/3 w formacie 80-bit: FD 3F + AA AA AA AA AA AA AA AA (przybliżone)
-    extended_double one_third;
-    unsigned char ot_data[] = { 0xAB, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xDA, 0xFD, 0x3F };
-    memcpy(one_third.bytes, ot_data, 10);
+    // 3. [-1, 1] + [1, 2]
+    A.low = ED_NEG_1; A.high = ED_ONE;
+    B.low = ED_ONE; B.high = ED_TWO;
+    Int_Add(&A, &B, &R); PrintBinary("[-1,1] + [1,2]", R);
 
-    // 3.0 w formacie 80-bit: 00 40 + C0 00 00 00 00 00 00 00
-    extended_double three;
-    unsigned char t_data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x40 };
-    memcpy(three.bytes, t_data, 10);
+    // 4. [10, 10] + [0, 0]
+    A.low = ED_TEN; A.high = ED_TEN;
+    B.low = ED_ZERO; B.high = ED_ZERO;
+    Int_Add(&A, &B, &R); PrintBinary("10 + 0", R);
 
-    interval A = { one_third, one_third };
-    interval B = { three, three };
-    interval R;
+    // 5. [4, 5] + [-5, -4]
+    A.low = ED_FOUR; A.high = ED_FIVE;
+    B.low = ED_NEG_5; B.high = ED_NEG_4;
+    Int_Add(&A, &B, &R); PrintBinary("[4,5] + [-5,-4]", R);
 
-    // 2. Wywołanie Twojego ASM
-    Int_Mul(&A, &B, &R);
+    printf("\n[ ODEJMOWANIE ]\n");
+    // 1. [5, 10] - [5, 10] -> [-5, 5]
+    A.low = ED_FIVE; A.high = ED_TEN;
+    B.low = ED_FIVE; B.high = ED_TEN;
+    Int_Sub(&A, &B, &R); PrintBinary("[5,10] - [5,10]", R);
 
-    // 3. Wyświetlanie wyników
-    char buf[100]{};
-    const int precision = 22;
+    // 2. [0, 1] - 10
+    A.low = ED_ZERO; A.high = ED_ONE;
+    B.low = ED_TEN; B.high = ED_TEN;
+    Int_Sub(&A, &B, &R); PrintBinary("[0,1] - 10", R);
 
-    cout << fixed << setprecision(precision);
+    // 3. [-5, -4] - [-2, -1]
+    A.low = ED_NEG_5; A.high = ED_NEG_4;
+    B.low = ED_NEG_2; B.high = ED_NEG_1;
+    Int_Sub(&A, &B, &R); PrintBinary("[-5,-4] - [-2,-1]", R);
 
-    // --- Dolna granica ---
-    ED_ToString(&R.low, buf, precision);
-    cout << "Wynik LOW:  " << buf << endl;
-    cout << "  HEX: ";
-    for (int i = 9; i >= 0; i--) printf("%02X ", R.low.bytes[i]);
-    cout << endl << endl;
+    // 4. [1, 1] - [1, 1]
+    A.low = ED_ONE; A.high = ED_ONE;
+    B.low = ED_ONE; B.high = ED_ONE;
+    Int_Sub(&A, &B, &R); PrintBinary("1 - 1", R);
 
-    // --- Górna granica ---
-    ED_ToString(&R.high, buf, precision);
-    cout << "Wynik HIGH: " << buf << endl;
-    cout << "  HEX: ";
-    for (int i = 9; i >= 0; i--) printf("%02X ", R.high.bytes[i]);
-    cout << endl << endl;
+    // 5. [10, 10] - [1, 2]
+    A.low = ED_TEN; A.high = ED_TEN;
+    B.low = ED_ONE; B.high = ED_TWO;
+    Int_Sub(&A, &B, &R); PrintBinary("10 - [1,2]", R);
 
-    // 4. Analiza bitowa
-    bool identical = true;
-    for (int i = 0; i < 10; i++) {
-        if (R.low.bytes[i] != R.high.bytes[i]) identical = false;
-    }
+    printf("\n[ MNOZENIE ]\n");
+    // 1. [-3, -2] * [-5, -4]
+    A.low = ED_NEG_3; A.high = ED_NEG_2;
+    B.low = ED_NEG_5; B.high = ED_NEG_4;
+    Int_Mul(&A, &B, &R); PrintBinary("[-3,-2] * [-5,-4]", R);
 
-    if (identical) {
-        cout << "[!] ALARM: Granice sa identyczne bitowo." << endl;
-        cout << "    Sprawdz, czy ED_Mul nie resetuje FPU Control Word (finit/fldcw)." << endl;
-    }
-    else {
-        cout << "[+] SUKCES: Granice roznia sie bitowo." << endl;
-        cout << "    Arytmetyka przedzialowa poprawnie rozszerza boki." << endl;
-    }
-    cout << "=====================================================" << endl;
+    // 2. [-2, 3] * [-4, 5]
+    A.low = ED_NEG_2; A.high = ED_THREE;
+    B.low = ED_NEG_4; B.high = ED_FIVE;
+    Int_Mul(&A, &B, &R); PrintBinary("[-2,3] * [-4,5]", R);
+
+    // 3. [-1, 1] * [-1, 1]
+    A.low = ED_NEG_1; A.high = ED_ONE;
+    B.low = ED_NEG_1; B.high = ED_ONE;
+    Int_Mul(&A, &B, &R); PrintBinary("[-1,1] * [-1,1]", R);
+
+    // 4. 2 * 0.5 (Poprawiona inicjalizacja stałej inline)
+    A.low = ED_TWO; A.high = ED_TWO;
+    extended_double ed_half;
+    unsigned char half_bytes[10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFE, 0x3F };
+    for (int i = 0; i < 10; i++) ed_half.bytes[i] = half_bytes[i];
+    B.low = ed_half; B.high = ed_half;
+    Int_Mul(&A, &B, &R); PrintBinary("2 * 0.5", R);
+
+    // 5. 10 * 0
+    A.low = ED_TEN; A.high = ED_TEN;
+    B.low = ED_ZERO; B.high = ED_ZERO;
+    Int_Mul(&A, &B, &R); PrintBinary("10 * 0", R);
+
+    printf("\n[ DZIELENIE ]\n");
+    // 1. 1 / 3
+    A.low = ED_ONE; A.high = ED_ONE;
+    B.low = ED_THREE; B.high = ED_THREE;
+    Int_Div(&A, &B, &R); PrintBinary("1 / 3", R);
+
+    // 2. 6 / [-3, -2]
+    extended_double ed_six;
+    unsigned char six_bytes[10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x01, 0x40 };
+    for (int i = 0; i < 10; i++) ed_six.bytes[i] = six_bytes[i];
+    A.low = ed_six; A.high = ed_six;
+    B.low = ED_NEG_3; B.high = ED_NEG_2;
+    Int_Div(&A, &B, &R); PrintBinary("6 / [-3,-2]", R);
+
+    // 3. -6 / [-3, -2]
+    A.low = ed_six; A.low.bytes[9] |= 0x80;
+    A.high = A.low;
+    B.low = ED_NEG_3; B.high = ED_NEG_2;
+    Int_Div(&A, &B, &R); PrintBinary("-6 / [-3,-2]", R);
+
+    // 4. 1 / [0.5, 2.0]
+    A.low = ED_ONE; A.high = ED_ONE;
+    B.low = ed_half; B.high = ED_TWO;
+    Int_Div(&A, &B, &R); PrintBinary("1 / [0.5,2]", R);
+
+    // 5. 1 / 10
+    A.low = ED_ONE; A.high = ED_ONE;
+    B.low = ED_TEN; B.high = ED_TEN;
+    Int_Div(&A, &B, &R); PrintBinary("1 / 10", R);
 }
 //using namespace interval_arithmetic;
 
 int main() {
 
 	SetX87Precision(PREC_EXTENDED);
-    RunComprehensiveTests();
+    RunAllTests();
+   // RunComprehensiveTests();
   //  BitLevelTest_WithToString();
 
   // VerifyIntervalPrecision();
