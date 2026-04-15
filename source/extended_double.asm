@@ -229,7 +229,7 @@ ED_ToStringBCD proc
 		dec r10
 		jnz loop5
 	fbstp tbyte ptr [rsp+32] 
-	
+		; TODO wypisz część po przecinku, 18 cyfr
 	mov r10, 18
 	loop5:
 		fmul st(0), st(1)
@@ -239,7 +239,7 @@ ED_ToStringBCD proc
 	fbld tbyte ptr [rsp+32]
 	fsubp st(1), st(0)
 	;fstp st(0)
-	; TODO wypisz część po przecinku, 18 cyfr
+		; TODO wypisz pozostałą część po przecinku
 	mov rcx, 0
 	call SetX87Rounding
 	add rsp,56
