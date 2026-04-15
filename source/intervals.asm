@@ -3,8 +3,13 @@ EXTERN SetX87Rounding : PROC
 EXTERN ED_Add : PROC
 EXTERN ED_Sub : PROC
 EXTERN ED_Mul : PROC
+EXTERN ED_Log : PROC
+EXTERN ED_Log2 : PROC
+EXTERN ED_Log10 : PROC
 EXTERN ED_NextMachine : PROC
 EXTERN ED_PrevMachine : PROC
+
+
 Int_op3 proc
 	sub rsp, 72
 	mov [rsp+40], rcx
@@ -261,4 +266,76 @@ not_zero:
 	ret
 
 Int_Div endp
+
+Int_Log proc
+	
+	fldz					; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rcx]
+	fcomip st(0), st(1)
+	jnb not_zero			
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 1   
+    fldenv [rsp]                
+    add rsp, 28
+	ret
+
+not_zero:
+	
+	sub rsp, 56
+	mov r8, ED_Log
+	call Int_op1
+	add rsp, 56
+	ret
+Int_Log endp
+
+Int_Log2 proc
+	
+	fldz					; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rcx]
+	fcomip st(0), st(1)
+	jnb not_zero			
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 1   
+    fldenv [rsp]                
+    add rsp, 28
+	ret
+
+not_zero:
+	
+	sub rsp, 56
+	mov r8, ED_Log2
+	call Int_op1
+	add rsp, 56
+	ret
+Int_Log2 endp
+
+Int_Log10 proc
+	
+	fldz					; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rcx]
+	fcomip st(0), st(1)
+	jnb not_zero			
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 1   
+    fldenv [rsp]                
+    add rsp, 28
+	ret
+
+not_zero:
+	
+	sub rsp, 56
+	mov r8, ED_Log10
+	call Int_op1
+	add rsp, 56
+	ret
+Int_Log10 endp
 END

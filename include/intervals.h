@@ -13,6 +13,7 @@ extern "C" {
 	// They automatically calculate the low and high bounds of the resulting interval based on the provided extended_double function and the input intervals.
 	// However, they do not perform any error checking or special handling for edge cases (such as NaN, infinity, or zero-width intervals), so they should be used in a controlled manner where the inputs are known to be valid and well-formed. 
 	// Additionally, these functions assume that the provided extended_double function correctly handles rounding and precision according to the x87 FPU settings, so any misuse of those settings could lead to incorrect results.
+	// Worth to note that some functions will set errors flag on wrong data, which one can check with GetX87Error.
 
 	typedef void (*ED_Func3)(const extended_double*, const extended_double*, const extended_double*, extended_double*);
 	// Placeholder function for performing a three-argument operation on intervals using the provided extended_double function. The func parameter is a pointer to a function that takes three extended_double pointers as input and produces an extended_double result. The Int_op3 function will apply this operation to the low and high bounds of the input intervals a, b, and c, and store the resulting interval in r. This allows for flexible composition of interval operations based on any compatible extended_double function.
@@ -32,5 +33,11 @@ extern "C" {
 	void Int_Sub(const interval* a, const interval* b, interval* r);
 	void Int_Mul(const interval* a, const interval* b, interval* r);
 	void Int_Div(const interval* a, const interval* b, interval* r);
+	
+	// Some logarithmic operation on intervals
+	
+	void Int_Log(const interval* a, interval* r);
+	void Int_Log2(const interval* a, interval* r);
+	void Int_Log10(const interval* a, interval* r);
 
 }

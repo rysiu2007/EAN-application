@@ -157,7 +157,7 @@ void RunAllTests() {
     for (int i = 0; i < 10; i++) ed_six.bytes[i] = six_bytes[i];
     A.low = ed_six; A.high = ed_six;
     B.low = ED_NEG_3; B.high = ED_NEG_2;
-    Int_Div(&A, &B, &R); PrintBinary("6 / [-3,-2]", R);
+    Int_Log2(&A, &R); PrintBinary("log(6) / [-3,-2]", R);
 
     // 3. -6 / [-3, -2]
     A.low = ed_six; A.low.bytes[9] |= 0x80;
