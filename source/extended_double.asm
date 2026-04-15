@@ -202,6 +202,51 @@ ED_ToString proc
 	ret
 ED_ToString endp
 
+ED_ToStringBCD proc
+	sub rsp, 56
+	
+	push rcx
+	mov rcx, 3
+	call SetX87Rounding
+	pop rcx
+
+	fld tbyte ptr [rcx]
+	fld st(0)
+	fbstp tbyte ptr [rsp+32]
+
+	fbld tbyte ptr [rsp+32]
+	fsubp st(1), st(0)
+	 ; TODO wypisz znak i część całkowitą
+
+	mov r10, 10
+	push r10
+	fild qword ptr [r10]	;mov 10 onto the stack
+	pop r10
+	fxch st(1)
+	mov r10, 18
+	loop5:
+		fmul st(0), st(1)
+		dec r10
+		jnz loop5
+	fbstp tbyte ptr [rsp+32] 
+	
+	mov r10, 18
+	loop5:
+		fmul st(0), st(1)
+		dec r10
+		jnz loop5
+
+	fbld tbyte ptr [rsp+32]
+	fsubp st(1), st(0)
+	;fstp st(0)
+	; TODO wypisz część po przecinku, 18 cyfr
+	mov rcx, 0
+	call SetX87Rounding
+	add rsp,56
+	ret
+
+ED_ToStringBCD endp
+
 ED_ToBinaryScientificString proc
 		mov r13, [rcx] ; load the extended double from memory into rax
 	mov bx, [rcx+8]
