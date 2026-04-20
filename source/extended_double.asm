@@ -204,7 +204,7 @@ ED_ToString endp
 
 ED_ToStringBCD proc
 	sub rsp, 56
-	
+
 	push rcx
 	mov rcx, 3
 	call SetX87Rounding
@@ -217,10 +217,81 @@ ED_ToStringBCD proc
 	fbld tbyte ptr [rsp+32]
 	fsubp st(1), st(0)
 	 ; TODO wypisz znak i część całkowitą
+	mov r11b, byte ptr [rcx+9]
+	test r11b, 80h
+	jz positive2
+
+	mov r10b, 45 ; - sign
+	mov [rdx], r10b
+	inc rdx
+	dec r8
+	jz fines2
+
+	positive2:
+	xor r12, r12
+	xor r13, r13
+	write_loop1:
+		mov al, byte ptr [rsp+r12+40]	;xxab
+		dec r12
+
+		shl ax, 4						;xab0
+		shr al, 4						;xa0b
+		and ax, 0F0Fh					;0a0b
+		or ax, 3030h	
+
+		test r13, r13
+		jnz write_ah
+
+		cmp ah, '0'
+		je al_
+		mov r13, 1				;set registers
+		jmp write_ah
+
+		al_:
+		cmp al, '0'
+		jne point
+		cmp r12, -8
+		jge write_loop1
+		;jmp next_part
+		point:
+		mov r13, 1
+		jmp write_al
+
+		write_ah:
+			mov [rdx], ah
+			inc rdx
+			dec r8
+			jz fines2
+
+		write_al:
+			mov [rdx], al
+			inc rdx
+			dec r8
+			jz fines2
+
+		cmp r12, -8
+		jge write_loop1
+
+	test r13, r13
+	jnz next_part
+
+	mov al, '0'
+	mov [rdx], al
+	inc rdx
+	dec r8
+	jz fines2
+	next_part:
+	mov al, '.'
+	mov [rdx], al
+	inc rdx
+	dec r8
+	jz fines2
+
+
 
 	mov r10, 10
 	push r10
-	fild qword ptr [r10]	;mov 10 onto the stack
+	fild qword ptr [rsp]	;mov 10 onto the stack
 	pop r10
 	fxch st(1)
 	mov r10, 18
@@ -228,18 +299,79 @@ ED_ToStringBCD proc
 		fmul st(0), st(1)
 		dec r10
 		jnz loop5
-	fbstp tbyte ptr [rsp+32] 
-		; TODO wypisz część po przecinku, 18 cyfr
-	mov r10, 18
-	loop5:
-		fmul st(0), st(1)
-		dec r10
-		jnz loop5
 
+	fld st(0)
+	fbstp tbyte ptr [rsp+32] 
 	fbld tbyte ptr [rsp+32]
 	fsubp st(1), st(0)
+		; TODO wypisz część po przecinku, 18 cyfr
+	
+	xor r12, r12
+	xor r13, r13
+	write_loop2:
+		mov al, byte ptr [rsp+r12+40]	;xxab
+		dec r12
+
+		shl ax, 4						;xab0
+		shr al, 4						;xa0b
+		and ax, 0F0Fh					;0a0b
+		or ax, 3030h	
+
+		write_ah2:
+			mov [rdx], ah
+			inc rdx
+			dec r8
+			jz fines2
+
+		write_al2:
+			mov [rdx], al
+			inc rdx
+			dec r8
+			jz fines2
+
+		cmp r12, -8
+		jge write_loop2
+
+	mov r10, 18
+	loop6:
+		fmul st(0), st(1)
+		dec r10
+		jnz loop6
+
+	fbstp tbyte ptr [rsp+32] 
+
+	xor r12, r12
+	xor r13, r13
+	write_loop3:
+		mov al, byte ptr [rsp+r12+40]	;xxab
+		dec r12
+
+		shl ax, 4						;xab0
+		shr al, 4						;xa0b
+		and ax, 0F0Fh					;0a0b
+		or ax, 3030h	
+
+		write_ah3:
+			mov [rdx], ah
+			inc rdx
+			dec r8
+			jz fines2
+
+		write_al3:
+			mov [rdx], al
+			inc rdx
+			dec r8
+			jz fines2
+
+		cmp r12, -8
+		jge write_loop3
 	;fstp st(0)
 		; TODO wypisz pozostałą część po przecinku
+
+	fines2:
+	
+	;fstp st(0)
+	fstp st(0)
 	mov rcx, 0
 	call SetX87Rounding
 	add rsp,56
