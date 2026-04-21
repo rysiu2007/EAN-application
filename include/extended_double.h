@@ -14,6 +14,7 @@ struct extended_double {
 #define PREC_DOUBLE 2
 #define PREC_EXTENDED 3
 
+#define ERR_SUCCESS 0
 #define ERR_INVALID_OP 1
 #define ERR_ZERO_DIVIDE 2
 #define ERR_DENORMAL 4
@@ -39,6 +40,9 @@ extern "C" {
 
 	// Retrieves the current x87 FPU error flags. The return value will be a combination of the ERR_* constants defined above.
 	unsigned __int64 GetX87Errors();
+
+	// Clears the x87 FPU error flags.
+	void ClearX87Errors();
 
 	// Sets the extended_double pointed to by result to the value represented by the double value.
 	void ED_FromDouble(double value, extended_double* result);

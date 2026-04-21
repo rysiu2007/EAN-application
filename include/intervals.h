@@ -39,5 +39,6 @@ extern "C" {
 	void Int_Log(const interval* a, interval* r);
 	void Int_Log2(const interval* a, interval* r);
 	void Int_Log10(const interval* a, interval* r);
+	void Int_LogN(const interval* a, const interval* n, interval* r);
 
 }

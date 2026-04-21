@@ -6,6 +6,7 @@ EXTERN ED_Mul : PROC
 EXTERN ED_Log : PROC
 EXTERN ED_Log2 : PROC
 EXTERN ED_Log10 : PROC
+EXTERN ED_LogN : PROC
 EXTERN ED_NextMachine : PROC
 EXTERN ED_PrevMachine : PROC
 
@@ -272,11 +273,11 @@ Int_Log proc
 	fldz					; compares low to 0 for arithmetic exception
 	fld tbyte ptr [rcx]
 	fcomip st(0), st(1)
-	jnb not_zero			
+	ja not_zero			
 
 	fstp st(0)
 	sub rsp, 28                 
-    fnstenv [rsp]               
+    fnstenv [rsp]               ;Set the error
     or word ptr [rsp+4], 1   
     fldenv [rsp]                
     add rsp, 28
@@ -296,7 +297,7 @@ Int_Log2 proc
 	fldz					; compares low to 0 for arithmetic exception
 	fld tbyte ptr [rcx]
 	fcomip st(0), st(1)
-	jnb not_zero			
+	ja not_zero			
 
 	fstp st(0)
 	sub rsp, 28                 
@@ -320,7 +321,7 @@ Int_Log10 proc
 	fldz					; compares low to 0 for arithmetic exception
 	fld tbyte ptr [rcx]
 	fcomip st(0), st(1)
-	jnb not_zero			
+	ja not_zero			
 
 	fstp st(0)
 	sub rsp, 28                 
@@ -338,4 +339,148 @@ not_zero:
 	add rsp, 56
 	ret
 Int_Log10 endp
+
+Int_LogN proc
+	sub rsp, 152
+
+	fldz					; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rcx]		; value test
+	fcomip st(0), st(1)
+	ja not_zero_value		
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 1   
+    fldenv [rsp]                
+    add rsp, 28
+	add rsp, 152
+	ret
+
+not_zero_value:
+	
+	fld1  ; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rdx]		; base test
+	fcomi st(0), st(2)		;low with zero
+	jna error
+	fcomi st(0), st(1)
+	ja good
+	fld tbyte ptr [rdx+10]	;high with one
+	fcomip st(0), st(2)
+	jb good
+
+
+
+	error:
+	fstp st(0)
+	fstp st(0)
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 1   
+    fldenv [rsp]                
+    add rsp, 28
+	add rsp, 152
+	ret
+
+	good:
+	fstp st(0)
+	fstp st(0)
+	fstp st(0)
+
+	push rbx
+	mov [rsp+32], r8
+	mov [rsp+40], rdx
+	mov [rsp+48], rcx
+	
+
+	mov rbx, 0
+
+logs:
+	inc rbx
+	mov rcx, rbx
+	call SetX87Rounding
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	lea r8, [rsp+66]	; ac
+	call ED_LogN
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rdx, 10
+	lea r8, [rsp+76] ;ad
+	call ED_LogN
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rcx, 10
+	lea r8, [rsp+86]
+	call ED_LogN			;bc
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rcx, 10
+	add rdx, 10
+	lea r8, [rsp+96]
+	call ED_LogN		;bd
+
+	fld tbyte ptr [rsp+66]
+	fld st(0)
+	fld tbyte ptr [rsp+76]
+	fcomi ST(0), ST(1)
+	fxch st(2)
+	fcmovnb ST(0), ST(2) ; If ST(0) is greater than ST(1) then we store ST(0) in ST(2)
+	fxch st(2)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+	
+	fstp ST(0) ; we dont need the additional value
+
+	fld tbyte ptr [rsp+86]
+	fcomi ST(0), ST(1)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+
+	fcomi ST(0), ST(2)
+	fxch st(2)
+	fcmovnb st(0), ST(2)
+	fxch st(2)
+
+	fstp ST(0) ; we dont need the additional value
+
+	fld tbyte ptr [rsp+96]
+	fcomi ST(0), ST(1)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+
+	fcomi ST(0), ST(2)
+	fxch st(2)
+	fcmovnb st(0), ST(2)
+	fxch st(2)
+
+	;we get min in st(1) and max in st(2)
+	fstp ST(0)
+	mov r8, [rsp+32]
+	lea r10, [rbx -1]
+	imul r10, r10, 10
+	
+	cmp rbx, 2				; cmp sets the same bits as fcomi, so yeah
+	fcmovnb st(0), st(1)
+	fstp tbyte ptr [r8+r10]
+	fstp st(0)
+
+	jl logs
+
+	pop rbx
+	;fstp tbyte ptr [r8+10]
+
+	mov rcx, 0
+	call SetX87Rounding
+	add rsp, 152
+	ret
+Int_LogN endp
 END

@@ -175,12 +175,236 @@ void RunAllTests() {
     B.low = ED_TEN; B.high = ED_TEN;
     Int_Div(&A, &B, &R); PrintBinary("1 / 10", R);
 }
+
+void Test_IntervalLogN_Extensive() {
+    std::cout << "=== ROZSZERZONE TESTY Int_LogN ===\n" << std::endl;
+
+    extended_double ed_1, ed_2, ed_10, ed_tiny, ed_large, ed_01, ed_09;
+    ED_FromDouble(1.0, &ed_1);
+    ED_FromDouble(2.0, &ed_2);
+    ED_FromDouble(10.0, &ed_10);
+    ED_FromDouble(0.1, &ed_01);
+    ED_FromDouble(0.9, &ed_09);
+    ED_FromDouble(1e-10, &ed_tiny);
+    ED_FromDouble(1e10, &ed_large);
+
+    interval result;
+    char bufL[128]{}, bufH[128]{};
+
+    // --- CASE 5: Obie wartości < 1 (Logarytm ułamka o ułamkowej podstawie) ---
+    // log_0.1(0.1) = 1.0. Sprawdza stabilność w obszarze ułamkowym.
+    interval i_val5 = { ed_01, ed_01 };
+    interval i_base5 = { ed_01, ed_01 };
+    Int_LogN(&i_val5, &i_base5, &result);
+    ED_ToStringBCD(&result.low, bufL, 40); ED_ToStringBCD(&result.high, bufH, 40);
+    std::cout << "TEST 5: log_0.1(0.1) [Oczekiwane: 1.0]\n  [ " << bufL << " , " << bufH << " ]\n";
+
+    // --- CASE 6: Bardzo mała podstawa i duży argument ---
+    // log_tiny(large) -> wynik powinien być bardzo mały, ujemny.
+    interval i_val6 = { ed_large, ed_large };
+    interval i_base6 = { ed_tiny, ed_tiny };
+    Int_LogN(&i_val6, &i_base6, &result);
+    ED_ToStringBCD(&result.low, bufL, 40); ED_ToStringBCD(&result.high, bufH, 40);
+    std::cout << "\nTEST 6: log_1e-10(1e10) [Oczekiwane: -1.0]\n  [ " << bufL << " , " << bufH << " ]\n";
+
+    // --- CASE 7: Argument bliski 1.0 (Test precyzji logarytmu) ---
+    // log_10(0.9) -> wynik ujemny, bliski zeru.
+    interval i_val7 = { ed_09, ed_09 };
+    interval i_base7 = { ed_10, ed_10 };
+    Int_LogN(&i_val7, &i_base7, &result);
+    ED_ToStringBCD(&result.low, bufL, 40); ED_ToStringBCD(&result.high, bufH, 40);
+    std::cout << "\nTEST 7: log_10(0.9)\n  [ " << bufL << " , " << bufH << " ]\n";
+
+    // --- CASE 8: Przedziały "stykające się" z jedynką (Test bezpieczeństwa) ---
+    // x = [2, 2], n = [1.0000000000000000001, 1.1]
+    // Logarytm o podstawie bardzo bliskiej 1 dąży do nieskończoności.
+    extended_double ed_near1;
+    ED_NextMachine(&ed_1, &ed_near1); // Pobiera następną reprezentowalną liczbę po 1.0
+    interval i_base8 = { ed_near1, ed_2 };
+    interval i_val8 = { ed_10, ed_10 };
+    Int_LogN(&i_val8, &i_base8, &result);
+    ED_ToStringBCD(&result.low, bufL, 40); ED_ToStringBCD(&result.high, bufH, 40);
+    std::cout << "\nTEST 8: log_[1.0+eps, 2](10.0) - Test stabilności blisko bieguna\n";
+    std::cout << "  [ " << bufL << " ,\n    " << bufH << " ]\n";
+
+    ClearX87Errors();
+    std::cout << "\n=== KONIEC ROZSZERZONYCH TESTÓW ===\n";
+}
+void Test_IntervalMul_Logic() {
+    std::cout << "=== TEST LOGIKI MNOŻENIA PRZEDZIAŁOWEGO ===\n";
+
+    extended_double a_low, a_high, b_low, b_high;
+    ED_FromDouble(-2.0, &a_low);
+    ED_FromDouble(3.0, &a_high);
+    ED_FromDouble(-4.0, &b_low);
+    ED_FromDouble(5.0, &b_high);
+
+    interval A = { a_low, a_high };
+    interval B = { b_low, b_high };
+    interval result;
+
+    char bufL[128]{}, bufH[128]{};
+
+    // Wywołanie Twojego mnożenia w ASM
+    Int_Mul(&A, &B, &result);
+
+    ED_ToStringBCD(&result.low, bufL, 120);
+    ED_ToStringBCD(&result.high, bufH, 120);
+
+    std::cout << "A: [-2, 3], B: [-4, 5]\n";
+    std::cout << "Wynik oczekiwany: [-12.0, 15.0]\n";
+    std::cout << "Wynik Twojego ASM: [ " << bufL << " , " << bufH << " ]\n";
+
+    // Sprawdzenie błędnego odwrócenia (jeśli Low > High)
+    // Pamiętaj: -12 jest MNIEJSZE niż 15.
+    std::cout << "-------------------------------------------\n";
+}
+
+void Test_IntervalLogN_FullRange() {
+    std::cout << "=== TEST LOGIKI: LOGARYTM Z DWOMA PRZEDZIAúAMI ===\n";
+
+    extended_double val_8, val_64, base_2, base_4;
+    ED_FromDouble(8.0, &val_8);
+    ED_FromDouble(64.0, &val_64);
+    ED_FromDouble(2.0, &base_2);
+    ED_FromDouble(4.0, &base_4);
+
+    interval X = { val_8, val_64 };   // [8, 64]
+    interval N = { base_2, base_4 };  // [2, 4]
+    interval result;
+
+    char bufL[128]{}, bufH[128]{};
+
+    // Wywołanie Twojego logarytmu w ASM
+    Int_LogN(&X, &N, &result);
+
+    ED_ToStringBCD(&result.low, bufL, 120);
+    ED_ToStringBCD(&result.high, bufH, 120);
+
+    std::cout << "x: [8, 64], base: [2, 4]\n";
+    std::cout << "Wynik oczekiwany: [ 1.5 , 6.0 ]\n";
+    std::cout << "Wynik Twojego ASM: [ " << bufL << " ,\n                    " << bufH << " ]\n";
+    std::cout << "--------------------------------------------------\n";
+}
+
+void Test_IntervalLogN_NegativeRange() {
+    std::cout << "=== TEST KRYTYCZNY: LOGARYTM UJEMNY (PODSTAWA < 1) ===\n";
+
+    extended_double val_8, val_64, base_025, base_05;
+
+    // x = [8, 64]
+    ED_FromDouble(8.0, &val_8);
+    ED_FromDouble(64.0, &val_64);
+
+    // n = [0.25, 0.5]
+    ED_FromDouble(0.25, &base_025);
+    ED_FromDouble(0.5, &base_05);
+
+    interval X = { val_8, val_64 };
+    interval N = { base_025, base_05 };
+    interval result;
+
+    char bufL[128]{}, bufH[128]{};
+
+    // Wywołanie Twojego logarytmu w ASM
+    // Spodziewane kombinacje: 
+    // log_0.5(8) = -3, log_0.5(64) = -6, log_0.25(8) = -1.5, log_0.25(64) = -3
+    Int_LogN(&X, &N, &result);
+
+    ED_ToStringBCD(&result.low, bufL, 40);
+    ED_ToStringBCD(&result.high, bufH, 40);
+
+    std::cout << "x: [8, 64], base: [0.25, 0.5]\n";
+    std::cout << "Wynik oczekiwany: [ -6.0 , -1.5 ]\n";
+    std::cout << "Wynik Twojego ASM: [ " << bufL << " ,\n                    " << bufH << " ]\n";
+
+    // Prosta weryfikacja logiczna w C++
+    double low_d = ED_ToDouble(&result.low);
+    double high_d = ED_ToDouble(&result.high);
+
+    if (low_d > high_d) {
+        std::cout << "\n!!! BŁĄD KRYTYCZNY: Dolna granica jest WIĘKSZA niż górna! !!!\n";
+        std::cout << "Twoja logika fcmov/fxch nie radzi sobie z liczbami ujemnymi.\n";
+    }
+    else {
+        std::cout << "\nPorządek przedziału poprawny (Low <= High).\n";
+    }
+    std::cout << "--------------------------------------------------\n";
+}
+
+void print_tbyte_hex(const extended_double* ed) {
+    const unsigned char* p = ed->bytes;
+    // TBYTE ma 10 bajtów. Drukujemy od końca (Little Endian), aby widzieć znak i wykładnik na początku.
+    std::cout << "0x";
+    for (int i = 9; i >= 0; --i) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)p[i];
+    }
+    std::cout << std::dec; // Powrót do systemu dziesiętnego
+}
+
+// Poprawny HEX: 0x4020 9502F90000000000 (Zauważ: tu akurat 10^10 dzieli się przez 2^n, 
+// ale precyzja TBYTE pozwala uniknąć błędów zaokrągleń pośrednich)
+// 10^10 dokładnie (10 000 000 000.0)
+const extended_double ED_10P10 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0xF9, 0x02, 0x95, 0x20, 0x40 };
+
+// 10^-10 (0.0000000001) - TO JEST KLUCZ DO TESTU 6!
+// Ta stała NIE MOŻE mieć zer na końcu, jeśli ma być dokładna.
+// 10^-10 dokładnie w 80-bitach:
+// Mantysa: 0xDB22D0E560418937 (z jawnym bitem 0x80...)
+// Wykładnik: 0x3FDD (16349 - 16383 = -34)
+// 10^-10 (0.0000000001) - Skorygowana precyzja dla x87
+extended_double ED_10M10 = { 0xC7, 0xD5, 0xED, 0xBD, 0xCE, 0xFE, 0xE6, 0xDB, 0xDD, 0x3F };
+
+void Test_LogN_Hex_Analysis() {
+    std::cout << "=== ANALIZA BINARNA (HEX) - TEST 6 ===\n";
+
+    extended_double val_large, base_tiny;
+    // x = 1e10, base = 1e-10
+  // // ED_FromDouble(1e10, &val_large);
+    ED_FromDouble(1e-10, &base_tiny);
+
+    interval X = { ED_10P10,  { 0x01, 0x00, 0x00, 0x00, 0x00, 0xF9, 0x02, 0x95, 0x20, 0x40 } };
+    interval N = { ED_10M10,  ED_10M10 };
+    interval result;
+
+    char bufL[128]{}, bufH[128]{};
+
+    // Wywołanie Twojego ASM
+    Int_LogN(&X, &N, &result);
+
+    ED_ToStringBCD(&result.low, bufL, 120);
+    ED_ToStringBCD(&result.high, bufH, 120);
+
+    std::cout << "Wynik BCD Low:  " << bufL << "\n";
+    std::cout << "Wynik HEX Low:  "; print_tbyte_hex(&ED_10M10);
+    std::cout << "\n\n";
+
+    std::cout << "Wynik BCD High: " << bufH << "\n";
+    std::cout << "Wynik HEX High: "; print_tbyte_hex(&result.high);
+    std::cout << "\n";
+
+    // Weryfikacja bitowa
+    bool identical = true;
+    for (int i = 0; i < 10; ++i) if (result.low.bytes[i] != result.high.bytes[i]) identical = false;
+
+    if (identical) {
+        std::cout << "\nUWAGA: Granice są identyczne bitowo.\n";
+    }
+    else {
+        std::cout << "\nSukces: Granice różnią się na poziomie binarnym.\n";
+    }
+    std::cout << "-------------------------------------------\n";
+}
 //using namespace interval_arithmetic;
 
 int main() {
 
 	SetX87Precision(PREC_EXTENDED);
-    RunAllTests();
+   // Test_IntervalMul_Logic();
+  //  Test_LogN_Hex_Analysis();
+
+    Test_IntervalLogN_Extensive();
+    //RunAllTests();
    // RunComprehensiveTests();
   //  BitLevelTest_WithToString();
 
