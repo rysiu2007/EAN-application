@@ -41,4 +41,10 @@ extern "C" {
 	void Int_Log10(const interval* a, interval* r);
 	void Int_LogN(const interval* a, const interval* n, interval* r);
 
+	// Some exponential functions
+
+	void Int_Exp2(const interval* a, interval* r);
+	void Int_Exp(const interval* a, interval* r);
+	void Int_Exp10(const interval* a, interval* r);
+
 }

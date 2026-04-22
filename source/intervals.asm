@@ -7,6 +7,9 @@ EXTERN ED_Log : PROC
 EXTERN ED_Log2 : PROC
 EXTERN ED_Log10 : PROC
 EXTERN ED_LogN : PROC
+EXTERN ED_Exp2 : PROC
+EXTERN ED_Exp10 : PROC
+EXTERN ED_Exp : PROC
 EXTERN ED_NextMachine : PROC
 EXTERN ED_PrevMachine : PROC
 
@@ -483,4 +486,28 @@ logs:
 	add rsp, 152
 	ret
 Int_LogN endp
+
+Int_Exp2 proc
+	sub rsp, 40
+	mov r8, ED_Exp2
+	call Int_op1
+	add rsp, 40
+	ret
+Int_Exp2 endp
+
+Int_Exp10 proc
+	sub rsp, 40
+	mov r8, ED_Exp10
+	call Int_op1
+	add rsp, 40
+	ret
+Int_Exp10 endp
+
+Int_Exp proc
+	sub rsp, 40
+	mov r8, ED_Exp
+	call Int_op1
+	add rsp, 40
+	ret
+Int_Exp endp
 END

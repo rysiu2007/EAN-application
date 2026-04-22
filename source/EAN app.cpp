@@ -194,8 +194,10 @@ void Test_IntervalLogN_Extensive() {
     // --- CASE 5: Obie wartości < 1 (Logarytm ułamka o ułamkowej podstawie) ---
     // log_0.1(0.1) = 1.0. Sprawdza stabilność w obszarze ułamkowym.
     interval i_val5 = { ed_01, ed_01 };
+    interval i_base10 = { ed_10, ed_10 };
     interval i_base5 = { ed_01, ed_01 };
     Int_LogN(&i_val5, &i_base5, &result);
+    Int_Exp10(&i_base10, & result);
     ED_ToStringBCD(&result.low, bufL, 40); ED_ToStringBCD(&result.high, bufH, 40);
     std::cout << "TEST 5: log_0.1(0.1) [Oczekiwane: 1.0]\n  [ " << bufL << " , " << bufH << " ]\n";
 
@@ -402,7 +404,7 @@ int main() {
 	SetX87Precision(PREC_EXTENDED);
    // Test_IntervalMul_Logic();
   //  Test_LogN_Hex_Analysis();
-
+//
     Test_IntervalLogN_Extensive();
     //RunAllTests();
    // RunComprehensiveTests();
