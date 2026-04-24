@@ -83,6 +83,9 @@ ED_ToDouble proc
 ED_ToDouble endp
 
 ED_ToString proc
+	push r13
+	push r14
+	push r12
 	mov r13, [rcx] ; load the extended double from memory into rax
 	mov bx, [rcx+8]
 	mov r9, 45
@@ -204,10 +207,15 @@ ED_ToString proc
 	
 	end_p:
 	;pop rax
+	pop r12
+	pop r14
+	pop r13
 	ret
 ED_ToString endp
 
 ED_ToStringBCD proc
+	push r12
+	push r13
 	sub rsp, 56
 
 	push rcx
@@ -380,12 +388,14 @@ ED_ToStringBCD proc
 	mov rcx, 0
 	call SetX87Rounding
 	add rsp,56
+	pop r13
+	pop r12
 	ret
 
 ED_ToStringBCD endp
 
 ED_ToBinaryScientificString proc
-		mov r13, [rcx] ; load the extended double from memory into rax
+	mov r13, [rcx] ; load the extended double from memory into rax
 	mov bx, [rcx+8]
 	mov r9, 45
 	test bx, 8000h ; check the least significant bit of bx to determine if the number is negative
@@ -781,8 +791,8 @@ ED_Exp10 proc
 ED_Exp10 endp
 
 ED_Pow proc
+	push r12
 	sub rsp, 72
-
 	mov [rsp+56], rdx
 	mov [rsp+48], r8
 	lea rdx, [rsp+32] ; reserve space on the stack for the result of the logarithm calculation
@@ -805,8 +815,9 @@ ED_Pow proc
 	fstp tbyte ptr [r10] ; store the result back to memory and pop st(0)
 	fstp st(0)
 
-
 	add rsp, 72
+	
+	pop r12
 	ret
 ED_Pow endp
 
