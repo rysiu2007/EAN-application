@@ -47,4 +47,15 @@ extern "C" {
 	void Int_Exp(const interval* a, interval* r);
 	void Int_Exp10(const interval* a, interval* r);
 
+	// It raises b to the e-th power. b must be above 0. Assumes the nonperfect nature of computer representation and assumes the e is not an integer.
+	void Int_Pow(const interval* b, const interval* e, interval* r);
+
+	// It raises b to the e-th power, truncates the exponent, so it is an integer, be vary that it throws the precision of the exponent out of the window, albeit not the precision of the operation itself.
+	void Int_PowInt(const interval* b, const extended_double* e, interval* r);
+
+	// Some trigonometric functions
+	
+	void Int_Sin(const interval* a, interval* r);
+	void Int_Cos(const interval* a, interval* r);
+
 }

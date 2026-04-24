@@ -295,12 +295,12 @@ void Test_IntervalLogN_NegativeRange() {
     extended_double val_8, val_64, base_025, base_05;
 
     // x = [8, 64]
-    ED_FromDouble(8.0, &val_8);
-    ED_FromDouble(64.0, &val_64);
+    ED_FromDouble(-5.5, &val_8);
+    ED_FromDouble(10.0, &val_64);
 
     // n = [0.25, 0.5]
     ED_FromDouble(0.25, &base_025);
-    ED_FromDouble(0.5, &base_05);
+    ED_FromDouble(13.0, &base_05);
 
     interval X = { val_8, val_64 };
     interval N = { base_025, base_05 };
@@ -311,10 +311,11 @@ void Test_IntervalLogN_NegativeRange() {
     // Wywołanie Twojego logarytmu w ASM
     // Spodziewane kombinacje: 
     // log_0.5(8) = -3, log_0.5(64) = -6, log_0.25(8) = -1.5, log_0.25(64) = -3
-    Int_LogN(&X, &N, &result);
+    Int_PowInt(&X, &base_05, &result);
 
-    ED_ToStringBCD(&result.low, bufL, 40);
-    ED_ToStringBCD(&result.high, bufH, 40);
+    PrintBinary("kss", result);
+   // ED_ToStringBCD(&result.low, bufL, 40);
+    //ED_ToStringBCD(&result.high, bufH, 40);
 
     std::cout << "x: [8, 64], base: [0.25, 0.5]\n";
     std::cout << "Wynik oczekiwany: [ -6.0 , -1.5 ]\n";
@@ -405,7 +406,7 @@ int main() {
    // Test_IntervalMul_Logic();
   //  Test_LogN_Hex_Analysis();
 //
-    Test_IntervalLogN_Extensive();
+    Test_IntervalLogN_NegativeRange();
     //RunAllTests();
    // RunComprehensiveTests();
   //  BitLevelTest_WithToString();

@@ -10,6 +10,10 @@ EXTERN ED_LogN : PROC
 EXTERN ED_Exp2 : PROC
 EXTERN ED_Exp10 : PROC
 EXTERN ED_Exp : PROC
+EXTERN ED_Pow : PROC
+EXTERN ED_Pow_Int : PROC
+EXTERN ED_Sin : PROC
+EXTERN ED_Cos : PROC
 EXTERN ED_NextMachine : PROC
 EXTERN ED_PrevMachine : PROC
 
@@ -510,4 +514,235 @@ Int_Exp proc
 	add rsp, 40
 	ret
 Int_Exp endp
+
+Int_Pow proc		
+
+	fldz					; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rcx]
+	fcomip st(0), st(1)
+	ja not_zero			
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 1   
+    fldenv [rsp]                
+    add rsp, 28
+	ret
+
+not_zero:	
+
+	push rbx
+	sub rsp, 120
+	mov [rsp+32], r8
+	mov [rsp+40], rdx
+	mov [rsp+48], rcx
+	
+	mov rbx, 0
+
+power:
+	inc rbx
+	mov rcx, rbx
+	call SetX87Rounding
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	lea r8, [rsp+66]	; ac
+	call ED_Pow
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rdx, 10
+	lea r8, [rsp+76] ;ad
+	call ED_Pow
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rcx, 10
+	lea r8, [rsp+86]
+	call ED_Pow			;bc
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rcx, 10
+	add rdx, 10
+	lea r8, [rsp+96]
+	call ED_Pow		;bd
+
+	fld tbyte ptr [rsp+66]
+	fld st(0)
+	fld tbyte ptr [rsp+76]
+	fcomi ST(0), ST(1)
+	fxch st(2)
+	fcmovnb ST(0), ST(2) ; If ST(0) is greater than ST(1) then we store ST(0) in ST(2)
+	fxch st(2)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+	
+	fstp ST(0) ; we dont need the additional value
+
+	fld tbyte ptr [rsp+86]
+	fcomi ST(0), ST(1)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+
+	fcomi ST(0), ST(2)
+	fxch st(2)
+	fcmovnb st(0), ST(2)
+	fxch st(2)
+
+	fstp ST(0) ; we dont need the additional value
+
+	fld tbyte ptr [rsp+96]
+	fcomi ST(0), ST(1)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+
+	fcomi ST(0), ST(2)
+	fxch st(2)
+	fcmovnb st(0), ST(2)
+	fxch st(2)
+
+	;we get min in st(1) and max in st(2)
+	fstp ST(0)
+	mov r8, [rsp+32]
+	lea r10, [rbx -1]
+	imul r10, r10, 10
+	
+	cmp rbx, 2				; cmp sets the same bits as fcomi, so yeah
+	fcmovnb st(0), st(1)
+	fstp tbyte ptr [r8+r10]
+	fstp st(0)
+
+	jl power
+
+	;fstp tbyte ptr [r8+10]
+
+	mov rcx, 0
+	call SetX87Rounding
+	add rsp, 120
+	pop rbx
+	ret
+Int_Pow endp
+
+Int_PowInt proc
+	push r12
+    xor r12, r12
+	fldz					; checks for 0 in the divisor interval
+	fld tbyte ptr [rcx]
+	fcomip st(0), st(1)
+	ja not_zero
+	fld tbyte ptr [rcx+10]
+	fcomip st(0), st(1)
+	jb not_zero
+
+	mov r10b, byte ptr [rdx+9]
+	test r10b, 80h
+	jz good
+
+	fstp st(0)
+	sub rsp, 28                 
+    fnstenv [rsp]               
+    or word ptr [rsp+4], 4     
+    fldenv [rsp]                
+    add rsp, 28
+	pop r12
+	ret
+
+
+not_zero:	
+	or r12, 1
+good:
+	fstp st(0)
+	push rbx
+	sub rsp, 120
+	mov [rsp+32], r8
+	mov [rsp+40], rdx
+	mov [rsp+48], rcx
+	
+	mov rbx, 0
+
+power:
+	inc rbx
+	mov rcx, rbx
+	call SetX87Rounding
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	lea r8, [rsp+66]	; ac
+	call ED_Pow_Int
+
+	mov rcx, [rsp+48]
+	mov rdx, [rsp+40]
+	add rcx, 10
+	lea r8, [rsp+86]
+	call ED_Pow_Int	;bc
+
+	fld tbyte ptr [rsp+66]
+	fld st(0)
+	fld tbyte ptr [rsp+86]
+	fcomi ST(0), ST(1)
+	fxch st(2)
+	fcmovnb ST(0), ST(2) ; If ST(0) is greater than ST(1) then we store ST(0) in ST(2)
+	fxch st(2)
+	fxch st(1)
+	fcmovb ST(0), ST(1)
+	fxch st(1)
+	
+	fstp ST(0) ; we dont need the additional value
+
+	mov r8, [rsp+32]
+	lea r10, [rbx -1]
+	imul r10, r10, 10
+	
+	cmp rbx, 2				; cmp sets the same bits as fcomi, so yeah
+	fcmovnb st(0), st(1)
+	fstp tbyte ptr [r8+r10]
+	fstp st(0)
+
+	jl power
+
+	test r12b, 01h
+	jnz fines
+
+	fld tbyte ptr [rdx]
+	fisttp qword ptr [rsp+110]
+	mov r10b, [rsp+110]
+	test r10b, 01h
+	jnz fines
+	
+	fldz
+	fstp tbyte ptr [r8]
+
+
+	;fstp tbyte ptr [r8+10]
+	fines:
+
+	mov rcx, 0
+	call SetX87Rounding
+	add rsp, 120
+	pop rbx
+	pop r12
+	ret
+Int_PowInt endp
+
+Int_Sin proc
+	sub rsp, 40
+	mov r8, ED_Sin
+	call Int_op1
+	add rsp, 40
+	ret
+Int_Sin endp
+
+Int_Cos proc
+	sub rsp, 40
+	mov r8, ED_Cos
+	call Int_op1
+	add rsp, 40
+	ret
+Int_Cos endp
+
 END
