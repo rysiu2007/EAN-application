@@ -27,6 +27,21 @@ extern "C" {
 	// Placeholder function for performing a single-argument operation on intervals using the provided extended_double function. The func parameter is a pointer to a function that takes one extended_double pointer as input and produces an extended_double result. The Int_op1 function will apply this operation to the low and high bounds of the input interval a, and store the resulting interval in r. This allows for flexible composition of interval operations based on any compatible extended_double function.
 	void Int_op1(const interval* a, interval* r, ED_Func func);
 
+	
+	// Interval basic functions
+
+	void Int_Width(const interval* a, extended_double* width);
+	void Int_Avg(const interval* a, extended_double* avg);
+	void Int_Intersect(const interval* a, const interval* b, interval* r);
+	bool Int_IsSubset(const interval* a, const interval* b);
+	bool Int_Contains(const interval* a, const extended_double num);
+	void Int_Distance(const interval* a, const interval* b, extended_double* dist);
+	
+
+	// Mathematical constants
+	void Int_PI(interval* r);
+	void Int_E(interval* r);
+	
 	// Basic arithmetic operations for intervals.
 
 	void Int_Add(const interval* a, const interval* b, interval* r);
