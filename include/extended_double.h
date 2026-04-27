@@ -44,13 +44,12 @@ extern "C" {
 	// Clears the x87 FPU error flags.
 	void ClearX87Errors();
 
-	// Sets the extended_double pointed to by result to the value represented by the double value.
+	// Sets the extended_double pointed to by result to the value represented by the double value. Note that there may be precision loss caused by using double value. This is caused by long double not being standard thus not as easy to manage.
 	void ED_FromDouble(double value, extended_double* result);
 	// Exports the value of the extended_double pointed to by num as a double. Note that this may involve rounding and loss of precision.
 	double ED_ToDouble(extended_double* num);
 	// NOTE: USE TOSTRINGBCD for better accuracy. Parses the num into a string in buffer, with a size limited by bufferSize. Note that this implementation is limited and may not handle all edge cases correctly, such as very large or very small numbers, or special values like infinity or NaN.
 	void ED_ToString(extended_double* num, char* buffer, int bufferSize);
-
 	// Proper method for parsing num into string, this implementation is limited to 18 digits integer part and 36 digits after the decimal point. 
 	void ED_ToStringBCD(extended_double* num, char* buffer, int bufferSize);
 	// Returns the next machine number after num

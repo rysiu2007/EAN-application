@@ -1,3 +1,6 @@
+.data
+const_e TBYTE 4000adf85458a2bb4a9ah
+
 .code
 EXTERN SetX87Rounding : PROC 
 EXTERN ED_Add : PROC
@@ -97,6 +100,202 @@ Int_op1 proc
 	add rsp, 72		
 	ret
 Int_op1 endp
+
+Int_Width proc
+	sub rsp, 40
+	mov r8, rdx
+	mov rdx, rcx
+	lea rcx, [rdx+10]
+	call ED_Sub
+	add rsp, 40
+	ret
+Int_Width endp
+
+Int_Avg proc
+	push r12
+	sub rsp, 32
+	mov r8, rdx
+	mov r12, rdx
+	lea rdx, [rcx+10]
+	call ED_Add
+	
+	fld1
+	fchs
+	fld tbyte ptr [r8]
+	fscale
+	fstp tbyte ptr [r8]
+	fstp st(0)
+
+	add rsp, 32
+	pop r12
+	ret
+Int_Avg endp
+
+Int_Intersect proc
+	fld tbyte ptr [rcx]
+	fld tbyte ptr [rdx]
+	fcomi st(0), st(1)
+	fcmovb st(0), st(1)
+	fstp tbyte ptr [r8]
+	fstp st(0)
+
+	fld tbyte ptr [rcx+10]
+	fld tbyte ptr [rdx+10]
+	fcomi st(0), st(1)
+	fcmovnb st, st(1)
+	fstp tbyte ptr [r8+10]
+	fstp st(0)
+
+	fld tbyte ptr [r8]
+	fld tbyte ptr [r8+10]
+	fcomip st(0), st(1)
+	fstp st(0)
+
+	jnb end_p
+
+	pxor xmm0, xmm0
+	movups [r8], xmm0
+	mov dword ptr [r8+16], 0
+	end_p:
+
+	ret
+
+Int_Intersect endp
+
+Int_IsSubset proc
+    fld tbyte ptr [rdx]     ; b.low
+    fld tbyte ptr [rcx]     ; a.low
+    fcomip st(0), st(1)     ; czy a.low <= b.low?
+    fstp st(0)              ; czyœcimy
+    ja not_subset           ; jeœli a.low > b.low, to b wystaje w dó³
+
+    fld tbyte ptr [rcx+10]  ; a.high
+    fld tbyte ptr [rdx+10]  ; b.high
+    fcomip st(0), st(1)     ; czy b.high <= a.high?
+    fstp st(0)              ; czyœcimy
+    ja not_subset           ; jeœli b.high > a.high, to b wystaje w górê
+
+    mov rax, 1              ; Sukces!
+    ret
+
+not_subset:
+    xor rax, rax            ; Pora¿ka!
+    ret
+Int_IsSubset endp
+
+Int_Contains proc
+    fld tbyte ptr [rdx]     ; b.low
+    fld tbyte ptr [rcx]     ; a.low
+    fcomip st(0), st(1)     ; czy a.low <= b.low?
+    fstp st(0)              ; czyœcimy
+    ja not_subset           ; jeœli a.low > b.low, to b wystaje w dó³
+
+    fld tbyte ptr [rcx+10]  ; a.high
+    fld tbyte ptr [rdx]  ; b.high
+    fcomip st(0), st(1)     ; czy b.high <= a.high?
+    fstp st(0)              ; czyœcimy
+    ja not_subset           ; jeœli b.high > a.high, to b wystaje w górê
+
+    mov rax, 1              ; Sukces!
+    ret
+
+not_subset:
+    xor rax, rax            ; Pora¿ka!
+    ret
+Int_Contains endp
+
+; TBYTE Int_Distance(interval* a, interval* b)
+Int_Distance proc
+    fld tbyte ptr [rcx]       ; a.low
+    fld tbyte ptr [rcx+10]    ; a.high
+    faddp st(1), st(0)        ; st(0) = a.low + a.high
+
+    fld tbyte ptr [rdx]       ; b.low
+    fld tbyte ptr [rdx+10]    ; b.high
+    faddp st(1), st(0)        ; st(0) = b.low + b.high, st(1) = suma_a
+
+    fsubp st(1), st(0)        ; st(0) = suma_a - suma_b
+    fabs                      ; st(0) = |suma_a - suma_b|
+    
+    fld1                      ; ³adujemy 1
+    fld1
+    faddp st(1), st(0)        ; st(0) = 2.0
+    fdivp st(1), st(0)        ; st(0) = dist (wynik koñcowy)
+    
+    ; Wynik zostaje na st(0) zgodnie z ABI dla typów zmiennoprzecinkowych
+    ; lub zapisujesz do [r8] jeœli tak wolisz
+    ret
+Int_Distance endp
+
+Int_PI proc
+	push r12
+	sub rsp, 40
+    fldpi                  
+    fldpi                  
+	mov r12, rcx           ; Za³aduj sta³¹ pi z procesora (najbli¿sze przybli¿enie)
+	fstp tbyte ptr [r12]  
+	fstp tbyte ptr [r12+10]  
+	;mov rcx, r12
+	mov rdx, r12
+	call ED_PrevMachine
+
+	lea rcx, [r12+10]
+	lea rdx, [r12+10]
+	call ED_NextMachine
+   ; Zapisz jako r.low
+	
+  ;  fstp tbyte ptr [r12+10] ; Zapisz jako r.high
+	add rsp, 40
+	pop r12
+    ret
+Int_PI endp
+
+Int_E proc
+	push r12
+	sub rsp, 40
+    fld tbyte ptr [const_e]      
+    fld tbyte ptr [const_e]      
+	mov r12, rcx           ; Za³aduj sta³¹ pi z procesora (najbli¿sze przybli¿enie)
+	fstp tbyte ptr [r12]  
+	fstp tbyte ptr [r12+10]  
+	;mov rcx, r12
+	mov rdx, r12
+	call ED_PrevMachine
+
+	lea rcx, [r12+10]
+	lea rdx, [r12+10]
+	call ED_NextMachine
+   ; Zapisz jako r.low
+	
+  ;  fstp tbyte ptr [r12+10] ; Zapisz jako r.high
+	add rsp, 40
+	pop r12
+    ret
+Int_E endp
+
+Int_LoadNum proc
+	push r12
+	sub rsp, 40
+    fld tbyte ptr [rcx]      
+    fld tbyte ptr [rcx]      
+	mov r12, rdx           ; Za³aduj sta³¹ pi z procesora (najbli¿sze przybli¿enie)
+	fstp tbyte ptr [r12]  
+	fstp tbyte ptr [r12+10]  
+	;mov rcx, r12
+	mov rdx, r12
+	call ED_PrevMachine
+
+	lea rcx, [r12+10]
+	lea rdx, [r12+10]
+	call ED_NextMachine
+   ; Zapisz jako r.low
+	
+  ;  fstp tbyte ptr [r12+10] ; Zapisz jako r.high
+	add rsp, 40
+	pop r12
+    ret
+Int_LoadNum endp
+
 
 Int_Add proc
 	sub rsp, 56

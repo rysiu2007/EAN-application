@@ -295,15 +295,18 @@ void Test_IntervalLogN_NegativeRange() {
     extended_double val_8, val_64, base_025, base_05;
 
     // x = [8, 64]
-    ED_FromDouble(-5.5, &val_8);
-    ED_FromDouble(10.0, &val_64);
+    ED_FromDouble(9.999999999999999, &val_8);
+    ED_FromDouble(10.000000000000001, &val_64);
 
     // n = [0.25, 0.5]
-    ED_FromDouble(0.25, &base_025);
-    ED_FromDouble(13.0, &base_05);
+    ED_FromDouble(10, &base_025);
+    ED_FromDouble(10.0, &base_05);
 
     interval X = { val_8, val_64 };
+    Int_PI(&X);
+
     interval N = { base_025, base_05 };
+    Int_E(&N);
     interval result;
 
     char bufL[128]{}, bufH[128]{};
@@ -311,9 +314,11 @@ void Test_IntervalLogN_NegativeRange() {
     // Wywołanie Twojego logarytmu w ASM
     // Spodziewane kombinacje: 
     // log_0.5(8) = -3, log_0.5(64) = -6, log_0.25(8) = -1.5, log_0.25(64) = -3
-    Int_PowInt(&X, &base_05, &result);
+    Int_Pow(&N, &X, &result);
 
     PrintBinary("kss", result);
+    Int_Avg(&result, &base_05);
+    ED_ToStringBCD(&base_05, bufH, 120);
    // ED_ToStringBCD(&result.low, bufL, 40);
     //ED_ToStringBCD(&result.high, bufH, 40);
 

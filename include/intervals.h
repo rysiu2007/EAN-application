@@ -30,17 +30,25 @@ extern "C" {
 	
 	// Interval basic functions
 
+	// Returns the interval's width, i.e. the distance between both ends.
 	void Int_Width(const interval* a, extended_double* width);
+	// Returns the arithmetic average between two ends. The same as middle.d
 	void Int_Avg(const interval* a, extended_double* avg);
+	// In set theory it returns intervals' intersection, or [0,0] if not found
 	void Int_Intersect(const interval* a, const interval* b, interval* r);
+	// Check if b is completely in a
 	bool Int_IsSubset(const interval* a, const interval* b);
+	// Check if num is in a
 	bool Int_Contains(const interval* a, const extended_double num);
+	// Distance between the middles of two intervals
 	void Int_Distance(const interval* a, const interval* b, extended_double* dist);
 	
 
 	// Mathematical constants
 	void Int_PI(interval* r);
 	void Int_E(interval* r);
+
+	void Int_LoadNum(const extended_double* num, interval* r);
 	
 	// Basic arithmetic operations for intervals.
 
