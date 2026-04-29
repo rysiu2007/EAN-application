@@ -227,6 +227,18 @@ Int_Distance proc
     ret
 Int_Distance endp
 
+Int_GetLeft proc
+	fld tbyte ptr [rcx]
+	fstp tbyte ptr [rdx]
+	ret
+Int_GetLeft endp
+
+Int_GetRight proc
+	fld tbyte ptr [rcx+10]
+	fstp tbyte ptr [rdx]
+	ret
+Int_GetRight endp
+
 Int_PI proc
 	push r12
 	sub rsp, 40
