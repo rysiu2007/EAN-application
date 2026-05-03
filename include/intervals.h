@@ -42,6 +42,9 @@ extern "C" {
 	bool Int_Contains(const interval* a, const extended_double num);
 	// Distance between the middles of two intervals
 	void Int_Distance(const interval* a, const interval* b, extended_double* dist);
+
+	void Int_GetLeft(const interval* a, extended_double* r);
+	void Int_GetRight(const interval* a, extended_double* r);
 	
 
 	// Mathematical constants

@@ -317,7 +317,7 @@ void Test_IntervalLogN_NegativeRange() {
     Int_Pow(&N, &X, &result);
 
     PrintBinary("kss", result);
-    Int_Avg(&result, &base_05);
+    Int_GetRight(&result, &base_05);
     ED_ToStringBCD(&base_05, bufH, 120);
    // ED_ToStringBCD(&result.low, bufL, 40);
     //ED_ToStringBCD(&result.high, bufH, 40);
