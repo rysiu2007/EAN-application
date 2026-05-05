@@ -821,7 +821,7 @@ ED_Pow proc
 	ret
 ED_Pow endp
 
-ED_Pow_Int proc
+ED_PowInt proc
 	sub rsp, 16	
 
 	fld tbyte ptr [rdx]
@@ -850,7 +850,7 @@ ED_Pow_Int proc
 
 	add rsp, 16
 	ret
-ED_Pow_Int endp
+ED_PowInt endp
 
 ED_Sin proc
 	fld tbyte ptr [rcx] ; load the double into st(0)

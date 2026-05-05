@@ -14,7 +14,7 @@ EXTERN ED_Exp2 : PROC
 EXTERN ED_Exp10 : PROC
 EXTERN ED_Exp : PROC
 EXTERN ED_Pow : PROC
-EXTERN ED_Pow_Int : PROC
+EXTERN ED_PowInt : PROC
 EXTERN ED_Sin : PROC
 EXTERN ED_Cos : PROC
 EXTERN ED_NextMachine : PROC
@@ -486,6 +486,44 @@ not_zero:
 
 Int_Div endp
 
+Int_Sqrt proc
+	fldz					; compares low to 0 for arithmetic exception
+	fld tbyte ptr [rcx]
+	fcomip st(0), st(1)
+	fstp st(0)
+	ja not_zero			
+	;fstp st(0)
+	sub rsp, 28                 
+	fnstenv [rsp]               
+	or word ptr [rsp+4], 1   
+	fldenv [rsp]                
+	add rsp, 28
+	ret
+
+	not_zero:
+	push rbx
+	sub rsp, 40
+	fld tbyte ptr [rcx]
+	fld tbyte ptr [rcx+10]
+	mov rbx, rdx
+	mov rcx, 2
+	call SetX87Rounding
+	fsqrt
+	mov rdx, rbx
+	fstp tbyte ptr [rdx+10]
+	mov rcx, 1
+	call SetX87Rounding
+	fsqrt
+	fstp tbyte ptr [rdx]
+	mov rcx, 0
+	call SetX87Rounding
+
+	add rsp, 40
+	pop rbx
+	ret
+
+Int_Sqrt endp
+
 Int_Log proc
 	
 	fldz					; compares low to 0 for arithmetic exception
@@ -884,13 +922,13 @@ power:
 	mov rcx, [rsp+48]
 	mov rdx, [rsp+40]
 	lea r8, [rsp+66]	; ac
-	call ED_Pow_Int
+	call ED_PowInt
 
 	mov rcx, [rsp+48]
 	mov rdx, [rsp+40]
 	add rcx, 10
 	lea r8, [rsp+86]
-	call ED_Pow_Int	;bc
+	call ED_PowInt	;bc
 
 	fld tbyte ptr [rsp+66]
 	fld st(0)
@@ -955,5 +993,7 @@ Int_Cos proc
 	add rsp, 40
 	ret
 Int_Cos endp
+
+
 
 END

@@ -36,6 +36,7 @@ set(SOURCES
     "source/EAN app.cpp"
     "source/extended_double.asm"
     "source/intervals.asm"
+    "source/api.asm"
 )
 
 

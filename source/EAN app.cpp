@@ -6,6 +6,7 @@
 //#include "Interval.h"
 #include "extended_double.h"
 #include "intervals.h"
+#include "api.h"
 
 using namespace std;
 
@@ -435,7 +436,7 @@ int main() {
    // ED_PrevMachine(&ed1, &ed1);
    // ED_PrevMachine(&ed1, &ed1);
     //ED_FromDouble(5.0, &ed1);
-    ED_Pow_Int(&ed1, &ed2, &ed1);
+    ED_PowInt(&ed1, &ed2, &ed1);
     ED_ToString(&ed1, buffer, 22);
     cout << buffer << endl;
     ed2 = pi;

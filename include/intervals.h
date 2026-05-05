@@ -59,6 +59,9 @@ extern "C" {
 	void Int_Sub(const interval* a, const interval* b, interval* r);
 	void Int_Mul(const interval* a, const interval* b, interval* r);
 	void Int_Div(const interval* a, const interval* b, interval* r);
+
+	void Int_Sqrt(const interval* a, interval* r);
+	void Int_Abs(const interval* a, interval* r);
 	
 	// Some logarithmic operation on intervals
 	

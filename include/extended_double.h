@@ -93,7 +93,7 @@ extern "C" {
 	void ED_Pow(const extended_double* base, const extended_double* exponent, extended_double* result);
 
 	// Exponentiation for the whole numbers, working in Z 
-	void ED_Pow_Int(const extended_double* base, const extended_double* exponent, extended_double* result);
+	void ED_PowInt(const extended_double* base, const extended_double* exponent, extended_double* result);
 
 	// Trigonometric functions, note that there is no error handling for invalid inputs (like NaN or infinity), so the behavior in those cases is undefined and may cause crashes or incorrect results. Use with caution.
 
