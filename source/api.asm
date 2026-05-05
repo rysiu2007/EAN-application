@@ -8,12 +8,13 @@ EXTERN Int_Add:PROC, Int_Sub:PROC, Int_Mul:PROC, Int_Div:PROC
 EXTERN Int_Log:PROC, Int_Log2:PROC, Int_Log10:PROC, Int_LogN:PROC
 EXTERN Int_Exp:PROC, Int_Pow:PROC, Int_PowInt:PROC
 EXTERN Int_Sin:PROC, Int_Cos:PROC, Int_Avg:PROC, Int_LoadNum:PROC, Int_PI:PROC, Int_E:PROC
+EXTERN Int_Sqrt:PROC, Int_Abs:PROC
 
 ; Funkcje punktowe (Extended Double)
 EXTERN ED_Add:PROC, ED_Sub:PROC, ED_Mul:PROC, ED_Div:PROC
 EXTERN ED_Log:PROC, ED_Log2:PROC, ED_Log10:PROC, ED_LogN:PROC
 EXTERN ED_Exp:PROC, ED_Pow:PROC, ED_PowInt:PROC
-EXTERN ED_Sin:PROC, ED_Cos:PROC
+EXTERN ED_Sin:PROC, ED_Cos:PROC, ED_Sqrt:PROC, ED_Abs:PROC
 
 
 ; Makro generuj¹ce dispatcher dla operacji matematycznych
@@ -61,6 +62,10 @@ GENERATE_MATH_DISPATCHER M_PowInt, PowInt
 ; Trygonometria
 GENERATE_MATH_DISPATCHER M_Sin, Sin
 GENERATE_MATH_DISPATCHER M_Cos, Cos
+
+GENERATE_MATH_DISPATCHER M_Sqrt, Sqrt
+GENERATE_MATH_DISPATCHER M_Abs, Abs
+
 
 M_Mid proc
     sub rsp, 40

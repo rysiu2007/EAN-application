@@ -524,6 +524,31 @@ Int_Sqrt proc
 
 Int_Sqrt endp
 
+Int_Abs proc
+	fld tbyte ptr [rcx]
+	fabs
+	fld tbyte ptr [rcx+10]
+	fabs
+	fld tbyte ptr [rcx]
+	fld tbyte ptr [rcx+10]
+
+	fchs
+	fcomi st(0), st(1)
+	fcmovnb st(0), st(1)		; If st(0) is greater than st(1) then we store st(0) in st(1)
+	fldz
+	fcomi st(0), st(1)
+	fcmovnb st(0), st(1)		; If st(0) is greater than st(1) then we store st(0) in st(1)
+	fstp tbyte ptr [rdx]
+	fstp st(0)
+	fstp st(0)
+	fcomi st(0), st(1)
+	fcmovnb st(0), st(1)	
+	fstp tbyte ptr [rdx+10]
+	fstp st(0)
+	ret
+
+Int_Abs endp
+
 Int_Log proc
 	
 	fldz					; compares low to 0 for arithmetic exception
