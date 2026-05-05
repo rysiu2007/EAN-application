@@ -406,8 +406,11 @@ void Test_LogN_Hex_Analysis() {
 }
 //using namespace interval_arithmetic;
 
+extern "C" {
+    void start();
+}
 int main() {
-
+    start();
 	SetX87Precision(PREC_EXTENDED);
    // Test_IntervalMul_Logic();
   //  Test_LogN_Hex_Analysis();

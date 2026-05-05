@@ -1,0 +1,116 @@
+// Microsoft Visual C++ generated resource script.
+//
+#pragma code_page(65001)
+
+#include "windows.h"
+#include "resource.h"
+/////////////////////////////////////////////////////////////////////////////
+// Polski (Polska) resources
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG1 DIALOGEX 0, 0, 315, 186
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "Interval Calculator - Simplified Newton"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "80-bit floating point mode",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | WS_GROUP,14,17,255,10
+    CONTROL         "Interval mode with 80-bit floating point input",IDC_RADIO2,
+                    "Button",BS_AUTORADIOBUTTON,14,29,255,10
+    CONTROL         "Interval mode with interval input",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,14,41,255,10
+    PUSHBUTTON      "Calculate",IDC_BUTTON1,117,62,50,14d
+    PUSHBUTTON      "Load DLL",IDC_BUTTON2,66,62,50,14
+    PUSHBUTTON      "Manual",IDC_BUTTON3,15,62,50,14
+    GROUPBOX        "Options",IDC_STATIC,7,7,301,49
+	EDITTEXT        IDC_EDIT1, 10, 100, 295, 78, ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | NOT WS_BORDER | WS_VSCROLL
+    GROUPBOX        "Output",IDC_STATIC,7,92,301,87
+    GROUPBOX        "Input",IDC_STATIC,174,54,134,29
+    EDITTEXT        IDC_EDIT2,180,63,60,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT3,243,63,58,14,ES_AUTOHSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_DIALOG1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 308
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 179
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_DIALOG1 AFX_DIALOG_LAYOUT
+BEGIN
+    0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 100, 100,
+    0, 0, 0, 0,
+    0, 0, 0, 0
+END
+// Polski (Polska) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
