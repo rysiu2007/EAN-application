@@ -14,6 +14,7 @@ EXTERN CheckDlgButton:PROC
 EXTERN GetDlgItem:PROC
 EXTERN EnableWindow:PROC
 EXTERN MessageBoxA:PROC
+EXTERN software_mode:dq
 .data
 	wndClassName db "IntervalCalcWndClass", 0
 	wndName db "IDD_DIALOG1", 0
@@ -96,17 +97,21 @@ _command:
 
     _radio1:
     xor rdx, rdx
+    mov software_mode, rdx
     call EnableWindow
     jmp _command_exit
 
     _radio2:
     mov rdx, 1
+    mov software_mode, rdx
     call EnableWindow
     jmp _command_exit
 
     _radio3:
     mov rdx, 1
     call EnableWindow
+    inc rdx
+    mov software_mode, rdx
     jmp _command_exit
 
     _button1:
