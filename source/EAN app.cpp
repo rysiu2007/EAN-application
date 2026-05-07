@@ -7,7 +7,7 @@
 #include "extended_double.h"
 #include "intervals.h"
 #include "Windows.h"
-#include "api.h"
+#include "math_core.h"
 
 using namespace std;
 
@@ -416,7 +416,7 @@ int main() {
 	SetX87Precision(PREC_EXTENDED);
 
 	extended_double num;
-    ED_FromString(&num, "-10.0", 6);
+    ED_FromString(&num, "-15.0", 6);
 
 	char buf[128]{};
     ED_ToString(&num, buf, 25);

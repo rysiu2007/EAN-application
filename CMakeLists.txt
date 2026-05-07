@@ -37,14 +37,14 @@ set(SOURCES
     "source/EAN app.cpp"
     "source/extended_double.asm"
     "source/intervals.asm"
-    "source/api.asm"
+    "source/math_core.asm"
     "source/main.asm"
     ${RESOURCE_FILE}
 )
 
 
 # 2. Dodaj pliki źródłowe
-add_executable (CMakeTarget ${SOURCES} "include/api.h")
+add_executable (CMakeTarget ${SOURCES} "include/math_core.h")
 
 # 3. Ustaw standard C++ (skoro planujesz Interval i MPFR, C++20 to dobry wybór)
 set_target_properties(CMakeTarget PROPERTIES 
