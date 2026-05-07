@@ -10,19 +10,30 @@ EXTERN PostQuitMessage:PROC
 EXTERN GetMessageA:PROC
 EXTERN ExitProcess:PROC
 EXTERN SetDlgItemTextA:PROC
+EXTERN CheckDlgButton:PROC
+EXTERN GetDlgItem:PROC
+EXTERN EnableWindow:PROC
+EXTERN MessageBoxA:PROC
+EXTERN software_mode:dq
 .data
 	wndClassName db "IntervalCalcWndClass", 0
 	wndName db "IDD_DIALOG1", 0
     msg_ready db "Ready! Hello and welcome for this new text.",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!",13,10," Newline working!", 0
-	;wndClass WNDCLASSA <>
+	msg_manual db "Welcome in the manual!",13, 10, "It solves nonlinear equations using Simplified Newton Method, which in contrast to normal Newton calculates the needed derivative only once."
+    db 13, 10,"How to use?",13,10,"First you need to load the DLL without mangled naming (extern 'C' in cpp)."
+    db " The DLL contains a function called GetN which returns the integer N, and f_1, f_2, ..., f_n,"
+    db " which implement given functions in this equation, and df_1, df_2, ..., df_n, which calculate the derivatives of given functions.",0
+    msg_manual_caption db "Interval Calculator manual", 0
+
+    ;wndClass WNDCLASSA <>
 	hInstance dq 0
 	hwnd dq 0
 
 .code
 
 DlgProc proc h_wnd:dq, uMsg:dd, wParam:dq, lParam:dq
-
-    mov r11, rcx
+    push r12
+    mov r12, rcx
   ;  mov [rsp + 8],  rcx    ; h_wnd -> [rbp+10h] (po stworzeniu ramki)
    ; mov [rsp + 16], edx    ; uMsg
     ;mov [rsp + 24], r8     ; wParam
@@ -39,6 +50,7 @@ DlgProc proc h_wnd:dq, uMsg:dd, wParam:dq, lParam:dq
     je _close
 
     xor rax, rax            ; Dla nieobs³u¿onych: zwróæ FALSE (0)
+    pop r12
     ret
 
 _init:
@@ -46,20 +58,72 @@ _init:
     and rsp, -16                ; Wymuœ wyrównanie stosu do 16 bajtów
     sub rsp, 30h                ; Zarezerwuj bezpieczne 48 bajtów (Shadow + wyrównanie)
     
-    mov rcx, r11       ; Pobierz uchwyt okna (teraz tam jest, bo go zapisa³eœ!)
+    mov rcx, r12       ; Pobierz uchwyt okna (teraz tam jest, bo go zapisa³eœ!)
     mov rdx, 1006               ; ID pola tekstowego
     lea r8, [msg_ready]         ; ADRES tekstu
     
     call SetDlgItemTextA
+
+    mov rcx, r12
+    mov rdx, 1001
+    mov r8, 1
+
+    call CheckDlgButton ; Set the radio button to interval mode
+   ; int 3
     
     add rsp, 30h
     mov rax, 1
-
+    pop r12
+    ret
 _command:
     ; Tutaj sprawdzasz r8 (wParam), czy klikniêto "Calculate"
     ; Jeœli klikniêto "WyjdŸ" (IDIDCANCEL):
     ; jmp _close
-    xor rax, rax
+    sub rsp, 40
+    and r8, 0FFFFh
+    mov rcx, r12
+    mov rdx, 1008
+    call GetDlgItem
+    mov rcx, rax
+    cmp r8, 1000
+    je _radio1
+    cmp r8, 1001
+    je _radio2
+    cmp r8, 1002
+    je _radio3
+    cmp r8, 1005
+    je _button1
+
+
+    _radio1:
+    xor rdx, rdx
+    mov software_mode, rdx
+    call EnableWindow
+    jmp _command_exit
+
+    _radio2:
+    mov rdx, 1
+    mov software_mode, rdx
+    call EnableWindow
+    jmp _command_exit
+
+    _radio3:
+    mov rdx, 1
+    call EnableWindow
+    inc rdx
+    mov software_mode, rdx
+    jmp _command_exit
+
+    _button1:
+    mov rcx, r12
+    lea rdx, [msg_manual]
+    lea r8, [msg_manual_caption]
+    mov r9, 0
+    call MessageBoxA
+    _command_exit:
+    mov rax, 1
+    add rsp, 40
+    pop r12
     ret
 
 _close:
@@ -69,6 +133,7 @@ _close:
     xor rdx, rdx            ; Drugi parametr: wynik (nResult)
     call EndDialog          ; Musisz wywo³aæ EndDialog, inaczej okno zostanie "zawieszone"
     add rsp, 28h
+    pop r12
     mov rax, 1              ; Zwróæ TRUE
     ret
 DlgProc endp

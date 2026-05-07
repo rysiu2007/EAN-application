@@ -6,6 +6,7 @@
 //#include "Interval.h"
 #include "extended_double.h"
 #include "intervals.h"
+#include "Windows.h"
 #include "api.h"
 
 using namespace std;
@@ -291,6 +292,7 @@ void Test_IntervalLogN_FullRange() {
 }
 
 void Test_IntervalLogN_NegativeRange() {
+    
     std::cout << "=== TEST KRYTYCZNY: LOGARYTM UJEMNY (PODSTAWA < 1) ===\n";
 
     extended_double val_8, val_64, base_025, base_05;

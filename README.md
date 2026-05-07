@@ -1,4 +1,4 @@
-# Interval Calculator
+# Interval Calculator [WIP]
 
 A lightweight, precise tool designed to calculate the distance between two points—whether they are numerical ranges, dates, or time intervals. This project focuses on accuracy and ease of use for quick technical calculations.
 
