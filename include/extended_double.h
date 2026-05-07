@@ -52,6 +52,8 @@ extern "C" {
 	void ED_ToString(extended_double* num, char* buffer, int bufferSize);
 	// Proper method for parsing num into string, this implementation is limited to 18 digits integer part and 36 digits after the decimal point. 
 	void ED_ToStringBCD(extended_double* num, char* buffer, int bufferSize);
+
+	void ED_FromString(extended_double* num, char* buffer, int bufferSize);
 	// Returns the next machine number after num
 	void ED_NextMachine(extended_double* num, extended_double* result);
 	// Returns the previous machine number before num

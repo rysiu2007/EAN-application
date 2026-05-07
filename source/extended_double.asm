@@ -394,6 +394,23 @@ ED_ToStringBCD proc
 
 ED_ToStringBCD endp
 
+ED_FromString proc
+	push rbx
+	push rsi
+	push rdi
+	lea rdi, [rdx+r8]
+	mov r10, rdi
+	mov al, '.'
+	mov rbx, rcx
+	mov rcx, r8
+	std
+	repne scasb
+	jne not_found
+
+	not_found:
+
+ED_FromString endp
+
 ED_ToBinaryScientificString proc
 	mov r13, [rcx] ; load the extended double from memory into rax
 	mov bx, [rcx+8]
