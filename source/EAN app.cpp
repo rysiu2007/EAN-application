@@ -412,8 +412,15 @@ extern "C" {
     void start();
 }
 int main() {
-    start();
+  //  start();
 	SetX87Precision(PREC_EXTENDED);
+
+	extended_double num;
+    ED_FromString(&num, "-10.0", 6);
+
+	char buf[128]{};
+    ED_ToString(&num, buf, 25);
+	cout << "ED: " << buf << endl;
    // Test_IntervalMul_Logic();
   //  Test_LogN_Hex_Analysis();
 //

@@ -1,3 +1,5 @@
+.data
+	const_10  dt 10.0
 .code
 
 PUBLIC ED_NextMachine
@@ -395,19 +397,158 @@ ED_ToStringBCD proc
 ED_ToStringBCD endp
 
 ED_FromString proc
+	sub rsp, 102
 	push rbx
 	push rsi
 	push rdi
-	lea rdi, [rdx+r8]
+
+
+;	int 3
+	xor r9,r9
+	mov r11b, byte ptr [rdx]
+	cmp r11b, '-' ; check the sign of the number
+	jnz @F
+	dec r8
+	inc rdx
+	inc r9
+	@@:
+
+	mov rsi, 36
+	cmp r8, rsi
+	cmova r8, rsi
+	mov rbx, rcx
+
+
+	cld
+	lea rdi, [rsp+32+24]
+	xor rax, rax
+	mov rcx, 8
+	rep stosq
+
+	lea rdi, [rdx+r8-1]	; get the dot position in the string
 	mov r10, rdi
 	mov al, '.'
-	mov rbx, rcx
 	mov rcx, r8
 	std
 	repne scasb
-	jne not_found
+	cld
+	;mov r11, rcx
+	je found
+	mov rcx, r8
+	dec rcx
+	;inc r8
+	found:
+	mov r11, r8
+	sub r11, rcx
+	dec r11
+	dec r11
 
-	not_found:
+
+
+	mov rcx, r8
+	dec rcx
+	lea rsi, [rdx+r8-2]	; get the last character of the string]
+	lea rdi, [rsp+32+24]
+copy_loop:
+	test rcx, rcx
+	je end_copy
+	mov al, byte ptr [rsi]
+	dec rsi
+	cmp al, '.'
+	je skip_char
+
+	stosb
+	dec rcx
+	jnz copy_loop
+	jmp end_copy
+	
+	skip_char:
+		dec rcx
+		jnz copy_loop
+
+	end_copy:
+;	int 3
+	lea rsi, [rsp+32+24]
+	mov rdi, rsi
+	mov rcx, 9
+modify_loop:
+	lodsw
+	;test al, al
+	;je end_modify
+	and ax, 0F0Fh
+	shl ah, 4
+	or al, ah
+	stosb
+	loop modify_loop
+
+	end_modify:
+	;fbld tbyte ptr [rsp+32+24+10]
+	fbld tbyte ptr [rsp+32+24]
+	fld tbyte ptr [const_10]
+
+	mov rcx, r11
+	loop1:
+		test rcx, rcx
+		je end_loop1
+		fdiv st(1), st(0)
+		dec rcx
+		jnz loop1
+	end_loop1:
+	fstp st(0)
+
+	lea rsi, [rsp+32+24+18]
+	mov rdi, rsi
+	mov rcx, 9
+modify_loop2:
+	lodsw
+;	test al, al
+;	je end_modify2
+	and ax, 0F0Fh
+	shl ah, 4
+	or al, ah
+	stosb
+	loop modify_loop2
+	end_modify2:
+	;fbld tbyte ptr [rsp+32+24+10]
+	fbld tbyte ptr [rsp+32+24+18]
+	fld tbyte ptr [const_10]
+
+	mov rcx, r11
+	sub rcx, 18
+	
+	test rcx, rcx
+	js pre_loop2_neg
+	loop2:
+		test rcx, rcx
+		je end_loop3
+		fdiv st(1), st(0)
+		dec rcx
+		jnz loop2
+	;end_loop2:
+	jmp end_loop3
+
+	pre_loop2_neg:
+	neg rcx
+	loop2_neg:
+		test rcx, rcx
+		je end_loop3
+		fmul st(1), st(0)
+		dec rcx
+		jnz loop2_neg
+	end_loop3:
+	fstp st(0)
+    faddp
+	cmp r9, 1
+	jnz positive2
+	fchs
+	positive2:
+	fstp tbyte ptr [rbx] ; store the result back to memory and pop st(0)
+	pop rdi
+	pop rsi
+	pop rbx
+	add rsp, 102
+	ret
+
 
 ED_FromString endp
 
