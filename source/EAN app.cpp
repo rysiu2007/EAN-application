@@ -412,7 +412,7 @@ extern "C" {
     void start();
 }
 int main() {
-  //  start();
+    start();
 	SetX87Precision(PREC_EXTENDED);
 
 	extended_double num;

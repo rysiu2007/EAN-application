@@ -65,7 +65,7 @@ _init:
     call SetDlgItemTextA
 
     mov rcx, r12
-    mov rdx, 1001
+    mov rdx, 1002
     mov r8, 1
 
     call CheckDlgButton ; Set the radio button to interval mode
@@ -94,7 +94,7 @@ _command:
     cmp r8, 1005
     je _button1
 
-
+    jmp _command_exit
     _radio1:
     xor rdx, rdx
     mov software_mode, rdx
@@ -102,9 +102,10 @@ _command:
     jmp _command_exit
 
     _radio2:
-    mov rdx, 1
-    mov software_mode, rdx
+    mov rdx, 0
     call EnableWindow
+    inc rdx
+    mov software_mode, rdx
     jmp _command_exit
 
     _radio3:
