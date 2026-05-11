@@ -6,6 +6,7 @@
 //#include "Interval.h"
 #include "extended_double.h"
 #include "intervals.h"
+#include "simp_newton.h"
 #include "Windows.h"
 #include "math_core.h"
 
