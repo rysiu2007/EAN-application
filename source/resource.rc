@@ -1,4 +1,4 @@
-// Microsoft Visual C++ generated resource script.
+﻿// Microsoft Visual C++ generated resource script.
 //
 #pragma code_page(65001)
 
@@ -54,8 +54,10 @@ BEGIN
 	EDITTEXT        IDC_EDIT1, 10, 100, 295, 78, ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | NOT WS_BORDER | WS_VSCROLL
     GROUPBOX        "Output",IDC_STATIC,7,92,301,87
     GROUPBOX        "Input",IDC_STATIC,174,54,134,29
-    EDITTEXT        IDC_EDIT2,180,63,60,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_EDIT3,243,63,58,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "<", IDC_BUTTON4, 178, 65, 10, 10
+    EDITTEXT        IDC_EDIT2,190,63,51,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT3,241,63,51,14,ES_AUTOHSCROLL
+    PUSHBUTTON      ">", IDC_BUTTON5, 294, 65, 10, 10
 END
 
 
