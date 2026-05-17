@@ -396,6 +396,166 @@ ED_ToStringBCD proc
 
 ED_ToStringBCD endp
 
+ED_ToStringScientific proc
+    push rbp
+    mov rbp, rsp
+    ; Alokujemy 112 bajtów (wielokrotność 16), zapewniając brak nakładania się zmiennych
+    sub rsp, 112             
+    
+    cmp r8, 30
+    jl end_p
+
+    ; --- 1. SPRAWDZENIE CZY LICZBA TO ZERO ---
+    mov rax, qword ptr [rcx]     ; Dolne 8 bajtów mantysy
+    movzx r10d, word ptr [rcx+8] ; 2 bajty wykładnika
+    and r10d, 7FFFh              ; Maskujemy bit znaku
+    mov r11, rax
+    or r11, r10                  ; Jeśli mantysa i wykładnik == 0, liczba to 0.0
+    jnz not_zero
+    
+    ; Jeśli liczba to 0.0, wpisujemy na sztywno "0.0E+0"
+    mov byte ptr [rdx], '0'
+    mov byte ptr [rdx+1], '.'
+    mov byte ptr [rdx+2], '0'
+    mov byte ptr [rdx+3], 'E'
+    mov byte ptr [rdx+4], '+'
+    mov byte ptr [rdx+5], '0'
+    mov byte ptr [rdx+6], 0
+    jmp end_p
+
+not_zero:
+    ; --- 2. OBSŁUGA ZNAKU LICZBY ---
+    fld tbyte ptr [rcx]          ; Ładujemy liczbę na FPU
+    
+    movzx r10d, word ptr [rcx+8] 
+    test r10d, 8000h             ; Czy bit znaku jest ustawiony?
+    jz positive
+    
+    ; Liczba ujemna: dopisujemy '-' i robimy wartość bezwzględną
+    mov byte ptr [rdx], '-'
+    inc rdx
+    dec r8
+    fabs                         ; st(0) = |liczba|
+
+positive:
+    ; Zapisujemy czystą dodatnią liczbę do [rbp-40]
+    fstp tbyte ptr [rbp-40] 
+
+    ; --- 3. WYCIĄGNIĘCIE WYKŁADNIKA DZIESIĘTNEGO ---
+    fstcw [rbp-8]
+    mov ax, [rbp-8]
+    or ax, 0400h                 ; Włącz tryb Round Down (floor)
+    and ax, 0F7FFh
+    mov [rbp-16], ax
+    fldcw [rbp-16]
+
+    fldlg2                       ; st(0) = log10(2)
+    fld tbyte ptr [rbp-40]      
+    fyl2x                        ; st(0) = log10(|liczba|) = Y
+
+    fld st(0)               
+    fistp qword ptr [rbp-24]     ; [rbp-24] = prawidłowy wykładnik dziesiętny
+    ; ... (Koniec Fazy 1: Wykładnik dziesiętny jest już w [rbp-24]) ...
+    fldcw [rbp-8]               ; Przywracamy domyślny tryb FPU
+    fstp st(0)                  ; Czyścimy stos FPU z pozostałości logarytmu
+
+    ; Przygotowujemy stałą 10 w pamięci RAM na stosie
+    mov qword ptr [rbp-88], 10
+
+    ; --- 4. FAZA 2: SKALOWANIE ORYGINALNEJ LICZBY ---
+    fld tbyte ptr [rbp-40]      ; Ładujemy ORYGINALNĄ dodatnią liczbę (np. 16.0)
+    
+    mov rcx, [rbp-24]           ; RCX = nasz wykładnik dziesiętny E
+    test rcx, rcx
+    jz scale_done               ; Jeśli E == 0, liczba jest już w przedziale [1, 10)
+    jns scale_down              ; Jeśli E > 0, musimy ją zmniejszyć (dzielić przez 10)
+
+    ; Jeśli E < 0, musimy ją zwiększyć (mnożyć przez 10)
+    neg rcx                     ; Zmieniamy znak na dodatni do pętli
+scale_up_loop:
+    fild qword ptr [rbp-88]     ; st(0) = 10.0 (załadowane z pamięci), st(1) = liczba
+    fmulp st(1), st(0)          ; st(0) = liczba * 10
+    dec rcx
+    jnz scale_up_loop
+    jmp scale_done
+
+scale_down:
+scale_down_loop:
+    fild qword ptr [rbp-88]     ; st(0) = 10.0, st(1) = liczba
+    fdivp st(1), st(0)          ; st(0) = liczba / 10
+    dec rcx
+    jnz scale_down_loop
+
+scale_done:
+    ; ... (Dalsza część funkcji BCD i wypisywania wykładnika bez zmian) ...
+    ; W tym momencie w st(0) znajduje się matematycznie IDEALNA mantysa (np. dokładnie 1.6)
+    ; Zapisujemy ją pod [rbp-40]
+    fstp tbyte ptr [rbp-40] 
+
+    ; --- 5. BEZPIECZNE WYWOŁANIE BCD ---
+    mov [rbp-48], rdx            
+    mov [rbp-56], r8             
+
+    lea rcx, [rbp-40]            
+    mov r8, 21                   
+    call ED_ToStringBCD     
+
+    ; Odzyskujemy wskaźniki
+    mov rcx, [rbp-48]            
+    add rcx, 21                  ; BCD wpisało dokładnie 20 znaków
+
+    ; Dopisujemy 'E'
+    mov byte ptr [rcx], 'E' 
+    inc rcx
+
+    ; --- 6. WPISYWANIE WYKŁADNIKA DZIESIĘTNEGO ---
+    mov rax, [rbp-24]            
+    
+    test rax, rax
+    js exp_neg
+    
+    mov byte ptr [rcx], '+'
+    inc rcx
+    jmp prep_div
+
+exp_neg:
+    mov byte ptr [rcx], '-'
+    inc rcx
+    neg rax                      
+
+prep_div:
+    mov r8, rcx                  ; R8 = nasz aktywny wskaźnik w buforze głównym
+    lea r9, [rbp-64]             ; R9 = bezpieczny dół bufora na cyfry wykładnika
+    mov r10, 10                  
+    xor r11, r11                 
+
+div_loop:
+    xor rdx, rdx            
+    div r10                      
+    add dl, '0'             
+    dec r9
+    mov [r9], dl                 
+    inc r11
+    test rax, rax
+    jnz div_loop            
+
+copy_exp_loop:
+    mov al, [r9]
+    mov [r8], al                 
+    inc r9
+    inc r8
+    dec r11
+    jnz copy_exp_loop
+
+    ; --- 7. ZAMKNIĘCIE STRINGA ---
+    mov byte ptr [r8], 0         
+
+end_p:
+    mov rsp, rbp
+    pop rbp
+    ret
+ED_ToStringScientific endp
+
 ED_FromString proc
 	sub rsp, 102
 	push rbx

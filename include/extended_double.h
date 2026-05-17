@@ -52,6 +52,8 @@ extern "C" {
 	void ED_ToString(extended_double* num, char* buffer, int bufferSize);
 	// Proper method for parsing num into string, this implementation is limited to 18 digits integer part and 36 digits after the decimal point. 
 	void ED_ToStringBCD(extended_double* num, char* buffer, int bufferSize);
+
+	void ED_ToStringScientific(extended_double* num, char* buffer, int bufferSize);
 	// Parses the string in buffer into an extended_double pointed to by num. The string should represent a valid floating-point number, and bufferSize should be the size of the buffer. Note that this implementation is limited and may not handle all edge cases correctly, such as very large or very small numbers, or special values like infinity or NaN. Method becomes unpredictable with different buffer_size than the actual string length, so make sure to provide correct buffer_size.
 	void ED_FromString(extended_double* num, const char* buffer, int bufferSize);
 	// Returns the next machine number after num
