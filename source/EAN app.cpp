@@ -417,7 +417,7 @@ int main() {
 	SetX87Precision(PREC_EXTENDED);
 
 	extended_double num;
-    ED_FromString(&num, "-16000000123.0", 15);
+    ED_FromString(&num, "-0.00000000000000000000000000016", 33);
 
 	char buf[128]{};
     ED_ToStringScientific(&num, buf, 30);
