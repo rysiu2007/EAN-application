@@ -8,4 +8,5 @@
 #include <vector>
 #include <iomanip>
 
+
 // TODO: W tym miejscu przywołaj dodatkowe nagłówki wymagane przez program.

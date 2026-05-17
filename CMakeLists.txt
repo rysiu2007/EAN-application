@@ -44,7 +44,7 @@ set(SOURCES
 
 
 # 2. Dodaj pliki źródłowe
-add_executable (CMakeTarget ${SOURCES} "include/math_core.h" "include/simp_newton.h")
+add_executable (CMakeTarget ${SOURCES} "include/math_core.h" "include/simp_newton.h" "source/main.cpp")
 
 # 3. Ustaw standard C++ (skoro planujesz Interval i MPFR, C++20 to dobry wybór)
 set_target_properties(CMakeTarget PROPERTIES 

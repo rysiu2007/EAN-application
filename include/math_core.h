@@ -15,7 +15,7 @@ enum mode : unsigned __int64
 };
 
 extern "C" {
-	mode software_mode = float80;
+	extern mode software_mode;
 
 	// Mathematical constants
 	void Get_PI(double_num* r);

@@ -412,8 +412,8 @@ void Test_LogN_Hex_Analysis() {
 extern "C" {
     void start();
 }
-int main() {
-  //  start();
+int main8() {
+   // startCPP();
 	SetX87Precision(PREC_EXTENDED);
 
 	extended_double num;

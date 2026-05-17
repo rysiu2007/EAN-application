@@ -15,6 +15,7 @@
 #define IDC_EDIT1                       1006
 #define IDC_EDIT2                       1007
 #define IDC_EDIT3                       1008
+#define IDC_GROUP_INPUT                  1011
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
