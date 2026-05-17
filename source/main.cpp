@@ -11,6 +11,9 @@ HMODULE loaded_dll = NULL;
 int num = 0, cur_pos = 0;
 void (**func)(double_num* ret, double_num* tab);
 void (**dfunc)(double_num* ret, double_num* tab);
+
+std::string* left;
+std::string* right;
 //extern "C" mode software_mode;      // common dialog box structure
 
 std::string OtworzPlikWinAPI(HWND hwndOwner) {
@@ -56,6 +59,9 @@ void ZaalokujTabliceFunkcji(int liczbaFunkcji) {
 	func = new (void (*[liczbaFunkcji])(double_num*, double_num*));
 	dfunc = new (void (*[liczbaFunkcji])(double_num*, double_num*));
 
+	left = new std::string[liczbaFunkcji];
+	right = new std::string[liczbaFunkcji];
+
 	// Teraz mo¿esz dynamicznie przypisywaæ funkcje pod indeksy:
 	// func[0] = MojaFunkcja;
 }
@@ -64,12 +70,20 @@ void ZwolnijPamiec() {
 	// Pamiêtaj o zwolnieniu pamiêci w DLL przed zamkniêciem programu!
 	delete[] func;
 	delete[] dfunc;
+	delete[] right;
+	delete[] left;
 }
 
 void UpdateInputLabel(HWND hwndDlg) {
 	if (is_dll_loaded) {
 		std::string inputText = "Input " + std::to_string(cur_pos) + "/" + std::to_string(num);
 		SetDlgItemTextA(hwndDlg, IDC_GROUP_INPUT, inputText.c_str());
+		SetDlgItemTextA(hwndDlg, IDC_EDIT2, left[cur_pos - 1].c_str());
+		SetDlgItemTextA(hwndDlg, IDC_EDIT3, right[cur_pos - 1].c_str());
+		if (cur_pos > 1) 	EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON4), TRUE);
+		else EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON4), FALSE);
+		if (cur_pos < num) 	EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON5), TRUE);
+		else EnableWindow(GetDlgItem(hwndDlg, IDC_BUTTON5), FALSE);
 	}
 }
 
@@ -124,8 +138,9 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					}
 					
 					num = ((int(*)())getNum)();
-					std::string inputText = "Input 1/" + std::to_string(num);
-					SetDlgItemTextA(hwndDlg, IDC_GROUP_INPUT, inputText.c_str());
+					cur_pos = 1;
+					UpdateInputLabel(hwndDlg);
+
 					if (num <= 0) {
 						MessageBox(hwndDlg, "Invalid number of functions returned by DLL!", "Error", MB_OK | MB_ICONERROR);
 						FreeLibrary(loaded_dll);
@@ -160,6 +175,36 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 				case IDC_BUTTON3:
 					MessageBox(hwndDlg, "Manual button clicked!", "Info", MB_OK);
 					break;
+				case IDC_BUTTON4:
+					if (cur_pos > 1) {
+						cur_pos--;
+					}
+					UpdateInputLabel(hwndDlg);
+					break;
+				case IDC_BUTTON5:
+					if (cur_pos < num) {
+						cur_pos++;
+					}
+					UpdateInputLabel(hwndDlg);
+					break;
+				case IDC_EDIT2: 
+				{
+					if (cur_pos > 0) {
+						CHAR text[50];
+						GetDlgItemTextA(hwndDlg, IDC_EDIT2, text, 50);
+						left[cur_pos - 1] = text;
+					}
+					break;
+				}
+				case IDC_EDIT3:
+				{
+					if (cur_pos > 0) {
+						CHAR text[50];
+						GetDlgItemTextA(hwndDlg, IDC_EDIT3, text, 50);
+						right[cur_pos - 1] = text;
+					}
+					break;
+				}
 				default:
 					return FALSE; // Nieobs³ugiwane polecenie
 			}
