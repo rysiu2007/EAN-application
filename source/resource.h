@@ -15,8 +15,8 @@
 #define IDC_EDIT1                       1006
 #define IDC_EDIT2                       1007
 #define IDC_EDIT3                       1008
-#define IDC_EDIT_MIT					1009
-#define IDC_EDIT_EPS					1010
+#define IDC_EDIT_MIT					1012
+#define IDC_EDIT_EPS					1013
 #define IDC_GROUP_INPUT                  1011
 #define IDC_STATIC                      -1
 

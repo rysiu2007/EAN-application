@@ -11,6 +11,8 @@ HMODULE loaded_dll = NULL;
 int num = 0, cur_pos = 0;
 void (**func)(double_num* ret, double_num* tab);
 void (**dfunc)(double_num* ret, double_num* tab);
+int mit = 0;
+extended_double eps;
 
 std::string* left;
 std::string* right;
@@ -202,6 +204,19 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						CHAR text[50];
 						GetDlgItemTextA(hwndDlg, IDC_EDIT3, text, 50);
 						right[cur_pos - 1] = text;
+					}
+					break;
+				}
+				case IDC_EDIT_MIT:
+				{
+					if (HIWORD(wParam)==EN_KILLFOCUS) {
+						CHAR text[50];
+						GetDlgItemTextA(hwndDlg, IDC_EDIT_MIT, text, 50);
+						mit = atoi(text);
+						if (mit <= 0) {
+							MessageBox(hwndDlg, "MIT should a number", "Error", MB_ICONERROR);
+						}
+						//right[cur_pos - 1] = text;
 					}
 					break;
 				}
