@@ -36,6 +36,7 @@ set(RESOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/source/resource.rc")
 set(SOURCES
     "source/EAN app.cpp"
     "source/extended_double.asm"
+    "source/simp_newton.asm"
     "source/intervals.asm"
     "source/math_core.asm"
     "source/main.asm"

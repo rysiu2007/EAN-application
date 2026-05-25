@@ -4,7 +4,7 @@
 #include <string>
 
 extern "C" {
-	mode software_mode = float80;
+	mode software_mode = interval_float_data;;
 }
 bool is_dll_loaded = false;
 HMODULE loaded_dll = NULL;
@@ -232,7 +232,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return FALSE;
 }
 
-int main() {
+int main2() {
 
 	HINSTANCE hInstance = GetModuleHandleA(NULL);
 	DialogBoxParamA(hInstance, MAKEINTRESOURCEA(IDD_DIALOG1), NULL, DialogProc, 0);

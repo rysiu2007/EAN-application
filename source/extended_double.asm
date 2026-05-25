@@ -833,6 +833,7 @@ ED_ToBinaryScientificString proc
 ED_ToBinaryScientificString endp
 
 ED_NextMachine proc
+	push rbx
 	mov rax, qword ptr [rcx]
 	mov bx, word ptr [rcx+8]
 	test bx, 8000h
@@ -845,6 +846,7 @@ ED_NextMachine proc
 	store:
 	mov qword ptr [rdx], rax
 	mov word ptr [rdx+8], bx
+	pop rbx
 	ret
 
 	neg2:
@@ -858,12 +860,14 @@ ED_NextMachine proc
 	store2:
 	mov qword ptr [rdx], rax
 	mov word ptr [rdx+8], bx
+	pop rbx
 	ret
 
 
 ED_NextMachine endp
 
 ED_PrevMachine proc
+	push rbx
 	mov rax, qword ptr [rcx]
 	mov bx, word ptr [rcx+8]
 	test bx, 8000h
@@ -878,6 +882,7 @@ ED_PrevMachine proc
 	store:
 	mov qword ptr [rdx], rax
 	mov word ptr [rdx+8], bx
+	pop rbx
 	ret
 
 	neg2:
@@ -888,6 +893,7 @@ ED_PrevMachine proc
 	store2:
 	mov qword ptr [rdx], rax
 	mov word ptr [rdx+8], bx
+	pop rbx
 	ret
 
 

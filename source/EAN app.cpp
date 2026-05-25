@@ -412,12 +412,107 @@ void Test_LogN_Hex_Analysis() {
 extern "C" {
     void start();
 }
-int main8() {
+
+void MakeDoubleNum(double_num* dest, const char* str) {
+    extended_double temp_ed;
+
+    // 1. Twój parser robi bezpieczną konwersję string -> float80
+    ED_FromString(&temp_ed, str, static_cast<int>(strlen(str)));
+
+    // 2. Ładujemy to do unii (gdzie software_mode ustawi odpowiednio FPU / Interwał)
+    M_LoadNum(&temp_ed, dest);
+}
+// f1(x,y,z) = 2*x^2 + y + z = 0
+void F1(double_num* ret, double_num* tab) {
+    double_num* x = &tab[0], * y = &tab[1], * z = &tab[2];
+    double_num x2, cx2, sum1;
+    double_num c2; MakeDoubleNum(&c2, "2.0");
+
+    M_Mul(x, x, &x2);
+    M_Mul(&c2, &x2, &cx2); // 2 * x^2
+    M_Add(&cx2, y, &sum1); // 2 * x^2 + y
+    M_Add(&sum1, z, ret);  // 2 * x^2 + y + z
+}
+
+// f2(x,y,z) = x*y - z + 2 = 0
+void F2(double_num* ret, double_num* tab) {
+    double_num* x = &tab[0], * y = &tab[1], * z = &tab[2];
+    double_num xy, sub1;
+    double_num c2; MakeDoubleNum(&c2, "2.0");
+
+    M_Mul(x, y, &xy);     // x * y
+    M_Sub(&xy, z, &sub1); // x * y - z
+    M_Add(&sub1, &c2, ret); // x * y - z + 2
+}
+
+// f3(x,y,z) = x*z - y*z = 0
+void F3(double_num* ret, double_num* tab) {
+    double_num* x = &tab[0], * y = &tab[1], * z = &tab[2];
+    double_num xz, yz;
+
+    M_Mul(x, z, &xz); // x * z
+    M_Mul(y, z, &yz); // y * z
+    M_Sub(&xz, &yz, ret); // x * z - y * z
+}
+
+// dF1/dx = 4x
+void DF1_diag(double_num* ret, double_num* tab) {
+    double_num c4; MakeDoubleNum(&c4, "4.0");
+    M_Mul(&c4, &tab[0], ret);
+}
+
+// dF2/dy = x
+void DF2_diag(double_num* ret, double_num* tab) {
+    // Bezpieczne przepisanie tab[0] za pomocą LoadNum
+    extended_double temp;
+    M_Mid(&tab[0], &temp);
+    M_LoadNum(&temp, ret);
+}
+
+// dF3/dz = x - y
+void DF3_diag(double_num* ret, double_num* tab) {
+    M_Sub(&tab[0], &tab[1], ret);
+}
+void (*func[])(double_num*, double_num*) = { F1, F2, F3 };
+void (*dfunc[])(double_num*, double_num*) = { DF1_diag, DF2_diag, DF3_diag };
+
+int main() {
    // startCPP();
 	SetX87Precision(PREC_EXTENDED);
-
 	extended_double num;
-    ED_FromString(&num, "-0.00000000000000000000000000016", 33);
+    ED_FromString(&num, "1.000000000000000000000000000016", 33);
+    double_num nums[3];
+    ;    M_LoadNum(&num, &nums[0]);
+    ED_FromString(&num, "-1.00000000000000000000000000016", 33);
+    M_LoadNum(&num, &nums[1]);
+    ED_FromString(&num, "-1.00000000000000000000000000016", 33);
+    M_LoadNum(&num, &nums[2]);
+    ED_FromString(&num, "1.000000000000000000000000000000", 33);
+    double_num omega;
+    M_LoadNum(&num, &omega);
+    ED_FromString(&num, "0.000000000000000000100000000000", 33);
+    SimplifiedNewton(3, nums, func, dfunc, &omega, 150, &num);
+
+    std::cout << "\n=============================================================\n";
+    std::cout << "OSTATECZNE WYNIKI METODY NEWTONA (Precyzja 80-bit):\n";
+    std::cout << "=============================================================\n";
+
+    for (int i = 0; i < 3; i++)
+    {
+        extended_double mid_value;
+        char display_buffer[128] = { 0 };
+
+        // 1. Wyciągamy czysty format float80 z unii double_num
+        M_Mid(&nums[i], &mid_value);
+
+        // 2. Formatujemy 80-bitowy float do postaci naukowej w buforze tekstowym
+        ED_ToStringScientific(&mid_value, display_buffer, sizeof(display_buffer));
+
+        // 3. Drukowanie wyniku na ekran konsoli
+        char nazwa_zmiennej = (i == 0) ? 'X' : (i == 1) ? 'Y' : 'Z';
+        std::cout << nazwa_zmiennej << " = " << display_buffer << "\n";
+    }
+    std::cout << "=============================================================\n";
 
 	char buf[128]{};
     ED_ToStringScientific(&num, buf, 30);

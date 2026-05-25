@@ -1,7 +1,7 @@
 extern M_Mid:PROC, M_Add:PROC, M_Sub:PROC, M_Mul:PROC, M_Div:PROC, M_Pow:PROC
 extern M_Log:PROC, M_Log2:PROC, M_Log10:PROC, M_LogN:PROC, M_Exp:PROC, M_Sin:PROC, M_Cos:PROC
 extern ED_Add:PROC, ED_Sub:PROC, ED_Mul:PROC, ED_Div:PROC, ED_Pow:PROC
-extern Int_Add:PROC, Int_Sub:PROC, Int_Mul:PROC, Int_Div:PROC, Int_Pow:PROC, Int_LoadNum:PROC
+extern Int_Add:PROC, Int_Sub:PROC, Int_Mul:PROC, Int_Div:PROC, Int_Pow:PROC, Int_LoadNum:PROC, Int_Avg:PROC, Int_Intersect:PROC
 extern software_mode:dq
 .data
 
@@ -15,30 +15,39 @@ SimplifiedNewton_Point proc
 	push r15
 	push rsi
 	push rdi
+	push rbp
 	sub rsp, 120
 	mov rbx, rcx
 	mov r13, rdx
 	mov r14, r8
+	mov rbp, r9
 	;mov r15, r9
-	mov r12, [rsp+120+8+8+8+8+8+8+8+32+8+8] ; mit
+	mov r12, [rsp+120+8+8+8+8+8+8+8+32+8+8+48+8] ; mit
 	main_loop:
 		fldz
 		fstp tbyte ptr [rsp+96]
+	;	int 3
 		push rbx
-		mov rsi, r8
-		mov rdi, r9
+
+		mov rsi, r14
+		mov rdi, rbp
 		mov r15, r13
 		iter_loop:
 
 			lea rcx, [rsp+48]
 			mov rdx, r13
 			mov rax, [rsi]
+			sub rsp, 32
 			call rax
+			add rsp, 32
+			;int 3
 			add rsi, 8
 			lea rcx, [rsp+72]
 			mov rdx, r13
 			mov rax, [rdi]
+			sub rsp, 32
 			call rax
+			add rsp, 32
 			add rdi, 8
 			lea rcx, [rsp+48]
 			lea rdx, [rsp+72]
@@ -46,37 +55,50 @@ SimplifiedNewton_Point proc
 			call ED_Div
 
 			lea rcx, [rsp+48]
-			mov rdx, [rsp+120+8+8+8+8+8+8+8+32+8]; omega
+			mov rdx, [rsp+120+8+8+8+8+8+8+8+32+8+8+48+8]; omega
 			lea r8, [rsp+48]
 			call ED_Mul
+
 
 			lea rcx, [r15]
 			lea rdx, [rsp+48]
 			lea r8, [r15]	;Should save it in a different place but for a prototype i think its ok
 			call ED_Sub
-			fld tbyte ptr [rsp+96]
+			;int 3
+			fld tbyte ptr [rsp+96+8]
 			fld tbyte ptr [rsp+48]
 			fabs
 			fcomi st(0), st(1)
 			fcmovb st(0), st(1)
-			fstp tbyte ptr [rsp+96]
+			fstp tbyte ptr [rsp+96+8]
 			fstp st(0)
 
 			add r15, 20
 			dec rbx
 		jnz iter_loop
 		pop rbx
-		fld tbyte ptr [rsp+120+8+8+8+8+8+8+8+32+8+8+8]
+		mov rdx, [rsp+120+8+8+8+8+8+8+8+32+8+8+8 + 48+8]
+		fld tbyte ptr [rdx] ; eps
+	;	int 3
+		;int 3
 		fld tbyte ptr [rsp+96]
 		fcomi st(0), st(1)
+		fstp st(0)
+		fstp st(0)
+		;jp error
 		jb end_loop
 	;Do additional checkings and operations
 	dec r12
 	jnz main_loop
-	
+	;int 3
+	;int 3
+;	error:
+;	int 3
 	end_loop:
+	;int 3
 	;mov rax, rdx
 	add rsp, 120
+	pop rbp
 	pop rdi
 	pop rsi
 	pop r15
@@ -106,6 +128,7 @@ SimplifiedNewton_Interval proc
     sub rsp, rax        ; dynamiczna alokacja
 
 	; --- KOPIOWANIE WEKTORA NA STOS ---
+	mov r13, rdx
     mov rbx, rcx        ; rbx = n (z rcx na wejœciu)
     imul rcx, 20        ; liczba bajtów
     mov rsi, r13        ; r13 to orygina³ (z rdx na wejœciu)
@@ -121,7 +144,9 @@ SimplifiedNewton_Interval proc
 	push rbx
 	;push rs
 	;mov rbx, rcx
+	;int 3
 	mov r15, 48 ; 32offset + 16 for pushes
+	; Replace interval data with point data for calculations
 	mid_point_loop:
 		lea rcx, [rsp+r15]
 		lea rdx, [rsp+r15]
@@ -132,6 +157,9 @@ SimplifiedNewton_Interval proc
 		add r15, 20
 		dec rbx
 	jnz mid_point_loop
+
+
+;	int 3
 	;loop mid_point_loop
 	pop rbx
 	pop r9
@@ -143,7 +171,7 @@ SimplifiedNewton_Interval proc
 		fldz
 		fstp tbyte ptr [rbp-56-96]
 		push rbx
-		mov rsi, r8
+		mov rsi, r14
 		mov rdi, r9
 		mov r15, r13
 		iter_loop:
@@ -202,10 +230,13 @@ SimplifiedNewton_Interval proc
 			fldz
 			fld tbyte ptr [r15 + 10] ; sup
 			fcomi st(0), st(1)
-			cmove rax, 1
+			push rbx
+			mov rbx, 1
+			cmove rax, rbx
+			pop rbx
 			fld tbyte ptr [r15]      ; inf
 			fcomi st(0), st(2)
-			jne .proceed
+			jne proceed
 			cmp rax, 0
 			fldz        ; Za³aduj 0
 			fldz        ; Za³aduj 0
@@ -214,15 +245,15 @@ SimplifiedNewton_Interval proc
 			
 			je end_loop
 
-			.proceed:
+			proceed:
 			fsubp st(1), st(0)
 			fabs
-			fld tbyte ptr [rbp-56-96]
+			fld tbyte ptr [rbp-56-96+8]
 		;	fld tbyte ptr [rbp-56-48]
 		;	fabs
 			fcomi st(0), st(1)
 			fcmovb st(0), st(1)
-			fstp tbyte ptr [rbp-56-96]
+			fstp tbyte ptr [rbp-56-96+8]
 			fstp st(0)
 
 			add r15, 20
@@ -272,3 +303,4 @@ SimplifiedNewton proc
         add rsp, 40
         ret
 SimplifiedNewton endp
+END
