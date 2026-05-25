@@ -491,7 +491,7 @@ int main() {
     double_num omega;
     M_LoadNum(&num, &omega);
     ED_FromString(&num, "0.000000000000000000100000000000", 33);
-    SimplifiedNewton(3, nums, func, dfunc, &omega, 150, &num);
+    SimplifiedNewton(3, nums, func, dfunc, &omega, 100, &num);
 
     std::cout << "\n=============================================================\n";
     std::cout << "OSTATECZNE WYNIKI METODY NEWTONA (Precyzja 80-bit):\n";

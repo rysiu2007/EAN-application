@@ -4,7 +4,7 @@
 #include <string>
 
 extern "C" {
-	mode software_mode = interval_float_data;;
+	mode software_mode = interval_float_data;
 }
 bool is_dll_loaded = false;
 HMODULE loaded_dll = NULL;
@@ -16,6 +16,12 @@ extended_double eps;
 
 std::string* left;
 std::string* right;
+
+std::string textBoxContent = "";
+
+void OutputLog(const char* string) {
+	textBoxContent += string;
+}
 //extern "C" mode software_mode;      // common dialog box structure
 
 std::string OtworzPlikWinAPI(HWND hwndOwner) {
@@ -103,6 +109,8 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 		}
 		case WM_COMMAND:
 		{
+			SetDlgItemTextA(hwndDlg, IDC_EDIT1, textBoxContent.c_str());
+			OutputLog("Pisze\r\n");
 			switch (LOWORD(wParam))
 			{
 				case IDC_RADIO1:
@@ -232,7 +240,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return FALSE;
 }
 
-int main2() {
+int main9() {
 
 	HINSTANCE hInstance = GetModuleHandleA(NULL);
 	DialogBoxParamA(hInstance, MAKEINTRESOURCEA(IDD_DIALOG1), NULL, DialogProc, 0);

@@ -111,7 +111,7 @@ SimplifiedNewton_Point proc
 SimplifiedNewton_Point endp
 
 SimplifiedNewton_Interval proc
-    push rbp
+	push rbp
 	mov rbp, rsp 
 	push rbx
 	push r12
@@ -120,169 +120,226 @@ SimplifiedNewton_Interval proc
 	push r15
 	push rsi
 	push rdi
-	mov rax, rcx        ; rcx = n
-    imul rax, 20        ; n * 20 bajtÛw
-    add rax, 256        ; zapas na Twoje zmienne [rsp+48], [rsp+96] itd.
-    add rax, 15         ; do wyrÛwnania
-    and rax, -16        ; wyrÛwnanie do 16 bajtÛw
-    sub rsp, rax        ; dynamiczna alokacja
 
-	; --- KOPIOWANIE WEKTORA NA STOS ---
-	mov r13, rdx
-    mov rbx, rcx        ; rbx = n (z rcx na wejúciu)
-    imul rcx, 20        ; liczba bajtÛw
-    mov rsi, r13        ; r13 to orygina≥ (z rdx na wejúciu)
-    lea rdi, [rsp+32]      ; nasza nowa tablica na samym dole
-    mov r13, rdi        ; PODMIANA: teraz r13 wskazuje na KOPI 
-    rep movsb
-	;mov rbx, rcx
-	mov r13, rdx
-	mov r14, r8
-	;mov r12, r9
-	;mov rcx, r
-	push r9
-	push rbx
-	;push rs
-	;mov rbx, rcx
-	;int 3
-	mov r15, 48 ; 32offset + 16 for pushes
-	; Replace interval data with point data for calculations
-	mid_point_loop:
-		lea rcx, [rsp+r15]
-		lea rdx, [rsp+r15]
-		call Int_Avg
-		lea rcx, [rsp+r15]
-		lea rdx, [rsp+r15]
-		call Int_LoadNum
-		add r15, 20
-		dec rbx
-	jnz mid_point_loop
+	; --- DYNAMICZNA ALOKACJA RAMKI NA STOSIE ---
+	mov rax, rcx        ; rax = n
+	imul rax, 20        ; n * 20 bajtÛw na kopiÍ tablicy przedzia≥Ûw
+	add rax, 256        ; bezpieczny zapas na zmienne lokalne (bufory) i strukturÍ pomocniczπ
+	add rax, 15         ; do wyrÛwnania
+	and rax, -16        ; maskowanie do 16 bajtÛw (wymÛg ABI x64)
+	sub rsp, rax        ; bezpieczne i sta≥e obniøenie stosu
 
+	; --- PRZEPISANIE PARAMETR”W WEJåCIOWYCH ---
+	mov rbx, rcx        ; rbx = n
+	mov r13, rdx        ; r13 = oryginalny adres tablicy przedzia≥Ûw z RDX
+	mov r14, r8         ; r14 = wskaünik na tablicÍ funkcji z R8
+	
+	; --- ZAPIS PARAMETR”W DO NOWYCH, ODSEPAROWANYCH STREF PAMI CI ---
+	mov [rbp-64], rbx   ; [rbp-64] trzyma n na sta≥e (bezpiecznie, nie dotykajπc rbp-24!)
+	mov [rbp-72], r9    ; [rbp-72] trzyma wskaünik na dfuncs
+	mov [rbp-80], rdx   ; [rbp-80] trzyma oryginalny adres tablicy z C++
+	
+	; --- KOPIOWANIE WEKTORA WEJåCIOWEGO NA STOS ---
+	mov rsi, r13        ; ürÛd≥o: oryginalna tablica przedzia≥Ûw
+	lea rdi, [rsp+32]   ; cel: bezpieczna strefa na naszym stosie
+	imul rcx, 20        ; liczba bajtÛw do skopiowania
+	rep movsb           ; skopiowanie oryginalnych przedzia≥Ûw
+	
+	lea r13, [rsp+32]   ; R13 od teraz to sta≥y, nienaruszalny wskaünik do naszej kopii roboczej
 
-;	int 3
-	;loop mid_point_loop
-	pop rbx
-	pop r9
-       ; rbp bÍdzie teraz naszym sta≥ym punktem odniesienia (Frame Pointer)
-	;sub rsp, 168
-	;mov r15, r9
-	mov r12, [rbp+32+8+8+8] ; mit
+	; --- POBRANIE PARAMETRU MIT (OFFSET 104) ---
+	mov r12, [rbp + 104] ; r12 = 150 (mit)
+
 	main_loop:
 		fldz
-		fstp tbyte ptr [rbp-56-96]
-		push rbx
-		mov rsi, r14
-		mov rdi, r9
-		mov r15, r13
+		fstp tbyte ptr [rbp-96] ; Gwarantowany, czysty i niezaleøny adres dla max_width
+		
+		; Przed kaødym obiegiem main_loop przywracamy licznik roboczy n bezpoúrednio ze sta≥ej bazy
+		mov rbx, [rbp-64]       ; rbx = n (np. 3)
+		
+		mov rsi, r14            ; rsi = wskaünik na tablicÍ funkcji
+		mov rdi, [rbp-72]       ; rdi = wskaünik na tablicÍ pochodnych
+		mov r15, r13            ; r15 = wskaünik na bieøπcy przedzia≥ w pÍtli
+		
 		iter_loop:
-
-				; 1. Wylicz úrodek aktualnego x_i (r15) -> wynik do [rsp+120] (punkt)
+			; =============================================================
+			; 1. Wylicz úrodek aktualnego przedzia≥u (r15) -> wynik do [rbp-128]
+			; =============================================================
 			lea rcx, [r15]
-			lea rdx, [rbp-56-120]
+			lea rdx, [rbp-128]
+			sub rsp, 32             ; Shadow Space dla C++
 			call Int_Avg
-			lea rcx, [rbp-56-120]
-			lea rdx, [rbp-56-120]
-			call Int_LoadNum
-
-			; 2. LICZENIE f_i(..., m(x_i), ...) 
-			; UWAGA: r13 to tablica przedzia≥Ûw. 
-			; Musisz na chwilÍ podmieniÊ r13[i] na punkt [rsp+120]
-			; lub Twoja funkcja f_i musi umieÊ to obs≥uøyÊ.
-			; dynamicznie alokowaÊ stos bÍdÍ musia≥
-			lea rcx, [rbp-56-48]
-			lea rdx, [rsp+32]
-			mov rax, [rsi]
-			call rax
-			add rsi, 8
-
-			; 3. LICZENIE df_i([x]) - tu uøywasz pe≥nych przedzia≥Ûw
-			lea rcx, [rbp-56-72]
-			mov rdx, r13
-			mov rax, [rdi]
-			call rax
-			add rdi, 8
-
-			; 4. Arytmetyka: (f / df) * omega
-			lea rcx, [rbp-56-48]
-			lea rdx, [rbp-56-72]
-			lea r8,  [rbp-56-48]
-			call Int_Div
-
-			lea rcx, [rbp-56-48]
-			mov rdx, [rbp+32+8+8]
-			lea r8,  [rbp-56-48]
-			call Int_Mul
-
-			; 5. NOWY PRZEDZIA£: m(x_i) - poprawka
-			lea rcx, [rbp-56-120] ; To jest nasz úrodek (punkt potraktowany jako przedzia≥)
-			lea rdx, [rbp-56-48]  ; To jest nasza poprawka przedzia≥owa
-			lea r8,  [rbp-56-48]  ; Wynik tymczasowy
-			call Int_Sub
-
-			; 6. INTERSECT: [x]_new = [x]_old \cap [temp]
-			lea rcx, [r15]     ; Stary przedzia≥
-			lea rdx, [rbp-56-48]  ; Wynik z punktu 5
-			lea r8,  [r15]     ; Zapisujemy z powrotem do g≥Ûwnej tablicy
-			call Int_Intersect
-			;trzeba warunki od nowa napisaÊ i intersecta dodaÊ z jego sprawdzeniami
-
-			xor rax, rax
-			fldz
-			fld tbyte ptr [r15 + 10] ; sup
-			fcomi st(0), st(1)
-			push rbx
-			mov rbx, 1
-			cmove rax, rbx
-			pop rbx
-			fld tbyte ptr [r15]      ; inf
-			fcomi st(0), st(2)
-			jne proceed
-			cmp rax, 0
-			fldz        ; Za≥aduj 0
-			fldz        ; Za≥aduj 0
-			fdivp
-			fstp st(0)   ; Teraz st(0) = 0/0 = NaN
+			add rsp, 32
 			
-			je end_loop
+			lea rcx, [rbp-128]
+			lea rdx, [rbp-128]
+			sub rsp, 32
+			call Int_LoadNum
+			add rsp, 32
 
-			proceed:
-			fsubp st(1), st(0)
+			; =============================================================
+			; Backup grubego przedzia≥u [r15] do [rbp-224]
+			; =============================================================
+			mov rax, qword ptr [r15]
+			mov [rbp-224], rax
+			mov rdx, qword ptr [r15+8]
+			mov [rbp-216], rdx
+			mov ecx, dword ptr [r15+16]
+			mov [rbp-208], ecx
+
+			; =============================================================
+			; WstrzykniÍcie punktu [rbp-128] w miejsce [r15]
+			; Prawid≥owe pobieranie danych z 20-bajtowej struktury wyjúciowej
+			; =============================================================
+			mov rax, qword ptr [rbp-128]   ; Pobranie mantysy z poczπtku struktury
+			mov cx, word ptr [rbp-120]     ; Pobranie wyk≥adnika (-128 + 8 = -120)
+	
+			; Zapisujemy na pozycjÍ INF (bajt 0-9)
+			mov qword ptr [r15], rax
+			mov word ptr [r15+8], cx
+
+			; Zapisujemy ten sam punkt na pozycjÍ SUP (bajt 10-19)
+			mov qword ptr [r15+10], rax
+			mov word ptr [r15+18], cx
+
+			; =============================================================
+			; 2. LICZENIE f_i( [x]_kopia ) -> wynik do [rbp-160]
+			; =============================================================
+			lea rcx, [rbp-160]      ; Bufor na wynik f_i
+			mov rdx, r13            ; Przekazujemy sta≥y wskaünik bazy ca≥ej tablicy
+			mov rax, [rsi]          ; Pobranie adresu funkcji
+			sub rsp, 32
+			call rax
+			add rsp, 32
+			add rsi, 8              ; NastÍpny wskaünik funkcji
+
+			; =============================================================
+			; PrzywrÛcenie grubego przedzia≥u z [rbp-224] do [r15]
+			; =============================================================
+			mov rax, qword ptr [rbp-224]
+			mov qword ptr [r15], rax
+			mov rdx, qword ptr [rbp-216]
+			mov qword ptr [r15+8], rdx
+			mov ecx, dword ptr [rbp-208]
+			mov dword ptr [r15+16], ecx
+
+			; =============================================================
+			; 3. LICZENIE df_i([x]) na pe≥nych, grubych przedzia≥ach -> wynik do [rbp-192]
+			; =============================================================
+			lea rcx, [rbp-192]      ; Bufor na wynik pochodnej czπstkowej
+			mov rdx, r13            ; Przekazujemy sta≥y wskaünik ca≥ej tablicy
+			mov rax, [rdi]          ; Pobranie adresu pochodnej
+			sub rsp, 32
+			call rax
+			add rsp, 32
+			add rdi, 8              ; NastÍpny wskaünik pochodnej
+
+			; =============================================================
+			; 4. ARYTMETYKA INTERWA£OWA: (f / df) * omega
+			; =============================================================
+			lea rcx, [rbp-160]      ; f
+			lea rdx, [rbp-192]      ; df
+			lea r8,  [rbp-160]      ; wynik tymczasowy do f
+			sub rsp, 32
+			call Int_Div
+			add rsp, 32
+
+			lea rcx, [rbp-160]
+			mov rdx, [rbp + 96]     ; Pobranie wskaünika 'omega' (offset 96)
+			lea r8,  [rbp-160]
+			sub rsp, 32
+			call Int_Mul
+			add rsp, 32
+
+			; =============================================================
+			; 5. NOWY PRZEDZIA£ SEGMENTU: m(x_i) - poprawka
+			; =============================================================
+			lea rcx, [rbp-128]      ; úrodek m(x_i) (pe≥ny interwa≥ 20-bajtowy)
+			lea rdx, [rbp-160]      ; poprawka interwa≥owa
+			lea r8,  [rbp-160]      ; wynik segmentu
+			sub rsp, 32
+			call Int_Sub
+			add rsp, 32
+
+			; =============================================================
+			; 6. PRZECI CIE (INTERSECT): [x]_new = [x]_old \cap [temp]
+			; =============================================================
+			lea rcx, [r15]          ; oryginalny, stary przedzia≥
+			lea rdx, [rbp-160]      ; nowo wyliczony przedzia≥
+			lea r8,  [r15]          ; nadpisujemy wynik bezpoúrednio w kopii
+			sub rsp, 32
+			call Int_Intersect
+			add rsp, 32
+
+			; =============================================================
+			; 7. OBLICZANIE SZEROKOåCI NOWEGO INTERWA£U (Kryterium Stopu)
+			; =============================================================
+			fld tbyte ptr [r15 + 10] ; sup
+			fld tbyte ptr [r15]      ; inf
+			fsubp st(1), st(0)       ; ST(0) = szerokoúÊ przedzia≥u (sup - inf)
 			fabs
-			fld tbyte ptr [rbp-56-96+8]
-		;	fld tbyte ptr [rbp-56-48]
-		;	fabs
+			
+			fld tbyte ptr [rbp-96]   ; Za≥aduj odseparowany max_width
 			fcomi st(0), st(1)
-			fcmovb st(0), st(1)
-			fstp tbyte ptr [rbp-56-96+8]
+			fcmovb st(0), st(1)      ; Aktualizacja maksimum b≥Ídu
+			fstp tbyte ptr [rbp-96]  ; Zapis pod bezpieczny adres
 			fstp st(0)
 
-			add r15, 20
-			dec rbx
+			add r15, 20              ; NastÍpny interwa≥ (wielkoúÊ 20 bajtÛw)
+			
+			dec rbx                  ; Bezpieczna dekrementacja rejestru roboczego
 		jnz iter_loop
-		pop rbx
-		fld tbyte ptr [rbp+32+8+8+8+8];eps
-		fld tbyte ptr [rbp-56-96]
+		
+		; =============================================================
+		; --- SPRAWDZANIE KRYTERIUM ZBIEØNOåCI (EPS - OFFSET 112) ---
+		; =============================================================
+		mov rdx, [rbp + 112]     ; Pobranie wskaünika 'eps' ze stosu C++
+		fld tbyte ptr [rdx]      ; ST(1) = wartoúÊ eps
+		fld tbyte ptr [rbp-96]   ; ST(0) = wyliczony w iteracji max_width
 		fcomi st(0), st(1)
-		jb end_loop
-	;Do additional checkings and operations
-	dec r12
+		
+		jb @sukces_interval      ; Jeúli max_width < eps -> koniec sukcesem!
+		
+		fstp st(0)               ; Jeúli brak zbieønoúci, czyúcimy koprocesor
+		fstp st(0)
+		
+	dec r12                      ; Zmniejsz licznik mit (150)
 	jnz main_loop
 	
+	mov rax, 0               ; ZwrÛÊ 0 (OsiπgniÍto limit iteracji mit)
+	jmp @przepisz_i_wyjdz
+
+	@sukces_interval:
+		mov rax, 1           ; ZwrÛÊ 1 (Sukces! Przedzia≥y siÍ zawÍzi≥y)
+
+@przepisz_i_wyjdz:
+	; --- ODKLEJENIE WYNIK”W I PRZEKAZANIE DO C++ ---
+	push rax                 ; Zachowaj kod powrotu (0 lub 1)
+	
+	mov rdi, [rbp-80]        ; Cel: Oryginalny, czysty adres docelowy odzyskany z [rbp-80]
+	mov rsi, r13             ; èrÛd≥o: Poczπtek naszej uaktualnionej kopii na stosie
+	mov rcx, [rbp-64]        ; Pobierz n ze sta≥ej bazy [rbp-64]
+	imul rcx, 20             ; Liczba bajtÛw do skopiowania (n * 20)
+	
+	jrcxz @puste_wyjscie
+	rep movsb                ; Bezpieczny sprzÍtowy transfer danych do pamiÍci C++
+	
+@puste_wyjscie:
+	pop rax                  ; PrzywrÛÊ kod powrotu (RAX = 0 lub 1)
+
 	end_loop:
-	;mov rax, rdx
-	pop rdi
-	pop rsi
-	pop r15
-	pop r14
-	pop r13
-	pop r12
-	pop rbx
-
-	mov rsp, rbp
-	pop rbp
-	ret
-
+		pop rdi
+		pop rsi
+		pop r15
+		pop r14
+		pop r13
+		pop r12
+		pop rbx
+		mov rsp, rbp             ; Bezpieczne i ca≥kowite zniszczenie ramki stosu
+		pop rbp
+		ret
 SimplifiedNewton_Interval endp
+
 
 SimplifiedNewton proc
     sub rsp, 40                 ; Shadow space dla x64 ABI
