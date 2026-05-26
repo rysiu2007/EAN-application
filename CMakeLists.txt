@@ -65,3 +65,5 @@ target_link_libraries(CMakeTarget PRIVATE MathCore
 #    Boost::boost 
 #    MPFR::MPFR
 )
+add_dependencies(CMakeTarget DataPlugin)
+add_subdirectory(DLL)

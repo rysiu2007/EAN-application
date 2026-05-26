@@ -3,6 +3,7 @@
 #include "math_core.h"
 #include "simp_newton.h"
 #include <string>
+#include <crtdbg.h>
 #include <commctrl.h>
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -27,6 +28,8 @@ std::string* left;
 std::string* right;
 
 double_num* left_ed;
+
+FARPROC setMode;
 //double_num* right_ed;
 
 HWND hwndDLG;
@@ -245,6 +248,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 
 			case IDC_BUTTON1: {
+				ClearX87Errors();
 				if (!is_dll_loaded) {
 					MessageBox(hwndDlg, "No proper DLL is loaded.", "Error", MB_OK | MB_ICONERROR);
 					break;
@@ -316,7 +320,10 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						OutputLog("]\r\n");
 					}
 				}
+//				FARPROC setMode = GetProcAddress(loaded_dll, "SetMode");
+				((void(*)(int))setMode)(software_mode);
 				CHAR text[50];
+				
 				OutputLog("Running SimplifiedNewton in ");
 				switch (software_mode)
 				{
@@ -389,6 +396,13 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						MessageBox(hwndDlg, "Failed to load DLL!", "Error", MB_OK | MB_ICONERROR);
 						break;
 					}
+					setMode = GetProcAddress(loaded_dll, "SetMode"); // Przyk³adowa funkcja, któr¹ chcemy za³adowaæ
+					if (!setMode) {
+						MessageBox(hwndDlg, "Failed to find SetMode in DLL!", "Error", MB_OK | MB_ICONERROR);
+						FreeLibrary(loaded_dll);
+						loaded_dll = NULL;
+						break;
+					}
 
 					FARPROC getNum = GetProcAddress(loaded_dll, "GetNum"); // Przyk³adowa funkcja, któr¹ chcemy za³adowaæ
 					if (!getNum) {
@@ -400,7 +414,6 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					
 					num = ((int(*)())getNum)();
 					cur_pos = 1;
-					UpdateInputLabel(hwndDlg);
 
 					if (num <= 0) {
 						MessageBox(hwndDlg, "Invalid number of functions returned by DLL!", "Error", MB_OK | MB_ICONERROR);
@@ -421,7 +434,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 							loaded_dll = NULL;
 							return TRUE;
 						}
-						func[i] = (void (*)(double_num*, double_num*))funcPtr;
+						func[i-1] = (void (*)(double_num*, double_num*))funcPtr;
 						std::string dfuncName = "df" + std::to_string(i);
 						FARPROC dfuncPtr = GetProcAddress(loaded_dll, dfuncName.c_str());
 						if (!dfuncPtr) {
@@ -431,8 +444,9 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 							loaded_dll = NULL;
 							return TRUE;
 						}
-						dfunc[i] = (void (*)(double_num*, double_num*))dfuncPtr;
+						dfunc[i-1] = (void (*)(double_num*, double_num*))dfuncPtr;
 					}
+					UpdateInputLabel(hwndDlg);
 					break;
 				}
 				case IDC_BUTTON3:
@@ -555,7 +569,9 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-
+	SetX87Precision(PREC_EXTENDED);
+	int tmpFlag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+	_CrtSetDbgFlag(tmpFlag | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
 	//HINSTANCE hInstance = GetModuleHandleA(NULL);
 	INITCOMMONCONTROLSEX icex;
 	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
@@ -563,11 +579,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitCommonControlsEx(&icex);
 
 	DialogBoxParamA(hInstance, MAKEINTRESOURCEA(IDD_DIALOG1), NULL, DialogProc, 0);
-	if (loaded_dll) {
-		FreeLibrary(loaded_dll);
-	}
 	if (dfunc) {
 		ZwolnijPamiec();
 	}
+	if (loaded_dll) {
+		FreeLibrary(loaded_dll);
+	}
+	//MessageBox(NULL, "lest", "", 0);
 	ExitProcess(0);
 }
