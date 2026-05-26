@@ -39,7 +39,7 @@ set(SOURCES
     "source/simp_newton.asm"
     "source/intervals.asm"
     "source/math_core.asm"
-    "source/main.asm"
+   # "source/main.asm"
     ${RESOURCE_FILE}
 )
 
