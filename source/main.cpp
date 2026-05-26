@@ -1,6 +1,7 @@
 #include "resource.h"
 #include "main.h"
 #include "math_core.h"
+#include "simp_newton.h"
 #include <string>
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
@@ -24,7 +25,7 @@ std::string* left;
 std::string* right;
 
 double_num* left_ed;
-double_num* right_ed;
+//double_num* right_ed;
 
 HWND hwndDLG;
 
@@ -154,7 +155,7 @@ void ZaalokujTabliceFunkcji(int liczbaFunkcji) {
 	left = new std::string[liczbaFunkcji];
 	right = new std::string[liczbaFunkcji];
 	left_ed = new double_num[liczbaFunkcji];
-	right_ed = new double_num[liczbaFunkcji];
+	// right_ed = new double_num[liczbaFunkcji];
 
 	// Teraz mo¿esz dynamicznie przypisywaæ funkcje pod indeksy:
 	// func[0] = MojaFunkcja;
@@ -167,7 +168,7 @@ void ZwolnijPamiec() {
 	delete[] right;
 	delete[] left;
 	delete[] left_ed;
-	delete[] right_ed;
+	//delete[] right_ed;
 }
 
 void UpdateInputLabel(HWND hwndDlg) {
@@ -258,7 +259,124 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					MessageBox(hwndDlg, "No omega is given.", "Error", MB_OK | MB_ICONERROR);
 					break;
 				}
-				MessageBoxA(hwndDlg, "Hello. Trying to calculate", "", 0);
+				for (int i = 0; i < num; i++)
+				{
+					if (!IsFormatXX_Strict(left[i].c_str())) {
+						MessageBox(hwndDlg, "No proper xn value is given.", "Error", MB_OK | MB_ICONERROR);
+						goto end_switch;
+					}
+					else
+					{
+						extended_double temp;
+						ED_FromString(&temp, left[i].c_str(), left[i].size() + 1);
+						M_LoadNum(&temp, &left_ed[i]);
+					}
+				}
+				if (software_mode == pure_interval) {
+					for (int i = 0; i < num; i++)
+					{
+						if (!IsFormatXX_Strict(right[i].c_str())) {
+							MessageBox(hwndDlg, "No proper xn value is given.", "Error", MB_OK | MB_ICONERROR);
+							goto end_switch;
+						}
+						else
+						{
+							extended_double temp;
+							ED_FromString(&temp, right[i].c_str(), right[i].size() + 1);
+							left_ed[i].inter.high = temp;
+						}
+					}
+				}
+				OutputLog("Loaded values:\r\n");
+				for (int i = 0; i < num; i++)
+				{
+					CHAR text[35];
+					_itoa_s(i, text, 10, 10);
+					OutputLog("x[");
+					OutputLog(text);
+					OutputLog("]: ");
+					extended_double temp;
+					if (software_mode == float80) {
+						ED_ToStringScientific(&left_ed[i].num, text, 35);
+						OutputLog(text);
+						OutputLog("\r\n");
+					}
+					else {
+						M_Mid(&left_ed[i], &temp);
+						ED_ToStringScientific(&temp, text, 35);
+						OutputLog(text);
+						OutputLog(", [");
+						ED_ToStringScientific(&left_ed[i].inter.low, text, 35);
+						OutputLog(text);
+						OutputLog(";");
+						ED_ToStringScientific(&left_ed[i].inter.high, text, 35);
+						OutputLog(text);
+						OutputLog("]\r\n");
+					}
+				}
+				CHAR text[50];
+				OutputLog("Running SimplifiedNewton in ");
+				switch (software_mode)
+				{
+				case float80:
+					OutputLog("float80");
+					break;
+				case interval_float_data:
+					OutputLog("interval float data");
+					break;
+				case pure_interval:
+					OutputLog("pure interval");
+					break;
+				default:
+					break;
+				}
+				OutputLog(" mode. With variables: mit=");
+				_itoa_s(mit, text, 50, 10);
+				OutputLog(text);
+				OutputLog(", eps=");
+				ED_ToStringScientific(&eps, text, 50);
+				OutputLog(text);
+				OutputLog(", omega=");
+				extended_double temp;
+				M_Mid(&omega, &temp);
+				ED_ToStringScientific(&temp, text, 50);
+				OutputLog(text);
+				OutputLog(".\r\n");
+				SimplifiedNewton(num, left_ed, func, dfunc, &omega, mit, &eps);
+				if (GetX87Errors() & (ERR_ZERO_DIVIDE | ERR_INVALID_OP)) {
+					OutputLog("There were some critical errors, or Newton was not convergent. Try with different data\r\n");
+					break;
+				}
+				OutputLog("Results:\r\n");
+				for (int i = 0; i < num; i++)
+				{
+					CHAR text[35];
+					_itoa_s(i, text, 10, 10);
+					OutputLog("x[");
+					OutputLog(text);
+					OutputLog("]: ");
+					extended_double temp;
+					if (software_mode == float80) {
+						ED_ToStringScientific(&left_ed[i].num, text, 35);
+						OutputLog(text);
+						OutputLog("\r\n");
+					}
+					else {
+						M_Mid(&left_ed[i], &temp);
+						ED_ToStringScientific(&temp, text, 35);
+						OutputLog(text);
+						OutputLog(", [");
+						ED_ToStringScientific(&left_ed[i].inter.low, text, 35);
+						OutputLog(text);
+						OutputLog(";");
+						ED_ToStringScientific(&left_ed[i].inter.high, text, 35);
+						OutputLog(text);
+						OutputLog("]\r\n");
+					}
+				}
+				//MessageBoxA(hwndDlg, "Hello. Trying to calculate", "", 0);
+				
+				end_switch:
 				break;
 			}
 				case IDC_BUTTON2: {
@@ -406,12 +524,12 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 								MessageBoxA(hwndDlg, "Omega must be strictly between 0 and 2 (0 < omega < 2)!", "Convergence Error", MB_ICONERROR);
 							}
 							else {
-								extended_double num;
-								ED_FromString(&num, text, strlen(text) + 1);
-								M_LoadNum(&num, &omega);
+								extended_double num1;
+								ED_FromString(&num1, text, strlen(text) + 1);
+								M_LoadNum(&num1, &omega);
 								OutputLog("Loaded value ");
 								// M_Mid(&omega, &num);
-								ED_ToStringScientific(&num, text, 50);
+								ED_ToStringScientific(&num1, text, 50);
 								OutputLog(text);
 								OutputLog(" as omega.\r\n");
 								is_omega = true;
