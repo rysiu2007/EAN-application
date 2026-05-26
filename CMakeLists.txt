@@ -44,8 +44,9 @@ set(SOURCES
 )
 
 
+add_library(MathCore STATIC ${SOURCES} "include/math_core.h")
 # 2. Dodaj pliki źródłowe
-add_executable (CMakeTarget ${SOURCES} "include/math_core.h" "include/simp_newton.h" "source/main.cpp" "include/main.h")
+add_executable (CMakeTarget WIN32 ${SOURCES} "include/simp_newton.h" "source/main.cpp")
 
 # 3. Ustaw standard C++ (skoro planujesz Interval i MPFR, C++20 to dobry wybór)
 set_target_properties(CMakeTarget PROPERTIES 
@@ -57,9 +58,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_include_directories(CMakeTarget PUBLIC include)
+target_include_directories(MathCore PUBLIC include)
 # 4. KLUCZOWE: Połącz biblioteki z Twoim programem
 # To sprawi, że kompilator "zobaczy" nagłówki Boost i MPFR
-target_link_libraries(CMakeTarget PRIVATE 
+target_link_libraries(CMakeTarget PRIVATE MathCore
 #    Boost::boost 
 #    MPFR::MPFR
 )

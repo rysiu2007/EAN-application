@@ -3,6 +3,8 @@
 #include "math_core.h"
 #include "simp_newton.h"
 #include <string>
+#include <commctrl.h>
+#pragma comment(lib, "comctl32.lib")
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 extern "C" {
@@ -551,9 +553,15 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return FALSE;
 }
 
-int main() {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
 
-	HINSTANCE hInstance = GetModuleHandleA(NULL);
+	//HINSTANCE hInstance = GetModuleHandleA(NULL);
+	INITCOMMONCONTROLSEX icex;
+	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	icex.dwICC = ICC_WIN95_CLASSES;
+	InitCommonControlsEx(&icex);
+
 	DialogBoxParamA(hInstance, MAKEINTRESOURCEA(IDD_DIALOG1), NULL, DialogProc, 0);
 	if (loaded_dll) {
 		FreeLibrary(loaded_dll);
