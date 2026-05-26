@@ -344,7 +344,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 				OutputLog(".\r\n");
 				SimplifiedNewton(num, left_ed, func, dfunc, &omega, mit, &eps);
 				if (GetX87Errors() & (ERR_ZERO_DIVIDE | ERR_INVALID_OP)) {
-					OutputLog("There were some critical errors, or Newton was not convergent. Try with different data\r\n");
+					OutputLog("There were some critical errors, or Newton was not convergent. Try with different data.\r\n");
 					break;
 				}
 				OutputLog("Results:\r\n");
