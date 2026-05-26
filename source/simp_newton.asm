@@ -125,7 +125,7 @@ SimplifiedNewton_Interval proc
 	; --- DYNAMICZNA ALOKACJA RAMKI NA STOSIE ---
 	mov rax, rcx        ; rax = n
 	imul rax, 20        ; n * 20 bajtów na kopiê tablicy przedzia³ów
-	add rax, 256        ; bezpieczny zapas na zmienne lokalne (bufory) i strukturê pomocnicz¹
+	add rax, 512        ; bezpieczny zapas na zmienne lokalne (bufory) i strukturê pomocnicz¹
 	add rax, 15         ; do wyrównania
 	add rax, 32
 	and rax, -16        ; maskowanie do 16 bajtów (wymóg ABI x64)
