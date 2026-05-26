@@ -4,7 +4,7 @@
 #include <string>
 
 extern "C" {
-	mode software_mode = interval_float_data;
+	mode software_mode = pure_interval;
 }
 bool is_dll_loaded = false;
 HMODULE loaded_dll = NULL;

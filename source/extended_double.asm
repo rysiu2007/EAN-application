@@ -58,14 +58,16 @@ GetX87Precision proc
 GetX87Precision endp
 
 GetX87Errors proc
+	fwait
 	fnstsw ax
-	and ax, 3Fh
+	and rax, 3Fh
 	ret
 
 GetX87Errors endp
 
 ClearX87Errors proc
 	fnclex
+	fwait
 	ret
 ClearX87Errors endp
 
@@ -802,25 +804,29 @@ ED_ToBinaryScientificString proc
 		jmp loop4 ; if there are more digits, continue the loop
 
 	preloop2:
-	pop rax
-	mov r13, 46
-	mov [r11], r13 ; write the decimal point character to the output string
-	inc r11
-	dec r8
+    pop rax
+    mov r13, 46
+    mov [r11], r13 ; zapisz kropkę '.'
+    inc r11
+    dec r8
 
-	loop2:
-		xor rdx, rdx ; clear rdx to prepare for the divisionxo
-		mul r12 ; multiply rax by 10 to shift the digits to the left
-		;shrd rdx, rax, 3 ; shift the most significant digit into rdx
-		test r8, r8 ; check if the output buffer is large enough to hold the string representation
-		jz end_p
-		
-		add rdx, 48 ; convert the least significant digit to a character
-		mov [r11], dl ; write the least significant digit as a character to the output string
-		dec r8
-		inc r11
-		jmp loop2 ; repeat the process until all digits have been processed
-	
+    ; --- NASZA APTECZNA POPRAWKA: LICZNIK BEZPIECZEŃSTWA ---
+    mov r13, 25    ; Maksymalna liczba cyfr po przecinku. Zapobiegnie nieskończonej pętli!
+
+    loop2:
+        dec r13    ; Zmniejsz licznik cyfr w każdej iteracji
+        jz end_p   ; Jeśli zrobiliśmy już 25 cyfr, uciekaj z pętli – uratowało nas przed zawieszeniem!
+
+        xor rdx, rdx 
+        mul r12    ; rax * 10
+        test r8, r8 
+        jz end_p
+        
+        add rdx, 48 
+        mov [r11], dl 
+        dec r8
+        inc r11
+        jmp loop2
 	
 	end_p:
 

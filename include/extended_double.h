@@ -16,8 +16,8 @@ struct extended_double {
 
 #define ERR_SUCCESS 0
 #define ERR_INVALID_OP 1
-#define ERR_ZERO_DIVIDE 2
-#define ERR_DENORMAL 4
+#define ERR_DENORMAL 2
+#define ERR_ZERO_DIVIDE 4
 #define ERR_OVERFLOW 8
 #define ERR_UNDERFLOW 16
 #define ERR_PRECISION 32

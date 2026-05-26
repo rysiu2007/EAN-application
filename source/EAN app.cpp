@@ -478,20 +478,35 @@ void (*dfunc[])(double_num*, double_num*) = { DF1_diag, DF2_diag, DF3_diag };
 
 int main() {
    // startCPP();
-	SetX87Precision(PREC_EXTENDED);
+    SetX87Precision(PREC_EXTENDED);
+    ClearX87Errors();
+
 	extended_double num;
-    ED_FromString(&num, "1.000000000000000000000000000016", 33);
     double_num nums[3];
-    ;    M_LoadNum(&num, &nums[0]);
-    ED_FromString(&num, "-1.00000000000000000000000000016", 33);
-    M_LoadNum(&num, &nums[1]);
-    ED_FromString(&num, "-1.00000000000000000000000000016", 33);
-    M_LoadNum(&num, &nums[2]);
-    ED_FromString(&num, "1.000000000000000000000000000000", 33);
+    ED_FromString(&nums[0].inter.low, "0.900000000000000000000000000000", 33);
+    ED_FromString(&nums[0].inter.high, "1.100000000000000000000000000000", 33);
+
+    ED_FromString(&nums[1].inter.low, "-2.15000000000010000000000000000", 33);
+    ED_FromString(&nums[1].inter.high, "-1.0", 5);
+
+    ED_FromString(&nums[2].inter.low, "-0.00000000010000000000000000000", 33);
+    ED_FromString(&nums[2].inter.high, "0.000000000100000000000000000000", 33);
+    // M_LoadNum(&num, &nums[0]);
+  //  ED_FromString(&num, "-2.00000000000000000000000000000", 33);
+  //  M_LoadNum(&num, &nums[1]);
+  //  ED_FromString(&num, "0.000000000000000000000000000000", 33);
+  //  M_LoadNum(&num, &nums[2]);
+    ED_FromString(&num, "0.010000000000000000000000000000", 33);
     double_num omega;
     M_LoadNum(&num, &omega);
-    ED_FromString(&num, "0.000000000000000000100000000000", 33);
-    SimplifiedNewton(3, nums, func, dfunc, &omega, 100, &num);
+    ED_FromString(&num, "0.000000000000000010000000000000", 33);
+    //  SimplifiedNewton(3, nums, func, dfunc, &omega, 100000000, &num);
+      int a = GetX87Errors();
+      if (a&(ERR_ZERO_DIVIDE|ERR_INVALID_OP)) {
+          std::cout << "there were some errors. \n";
+          // throw;
+      }
+
 
     std::cout << "\n=============================================================\n";
     std::cout << "OSTATECZNE WYNIKI METODY NEWTONA (Precyzja 80-bit):\n";
@@ -510,7 +525,13 @@ int main() {
 
         // 3. Drukowanie wyniku na ekran konsoli
         char nazwa_zmiennej = (i == 0) ? 'X' : (i == 1) ? 'Y' : 'Z';
-        std::cout << nazwa_zmiennej << " = " << display_buffer << "\n";
+        std::cout << nazwa_zmiennej << " = " << display_buffer << " [";
+
+        // 2. Formatujemy 80-bitowy float do postaci naukowej w buforze tekstowym
+        ED_ToStringScientific(&nums[i].inter.low, display_buffer, sizeof(display_buffer));
+        std::cout << display_buffer << "; ";
+        ED_ToStringScientific(&nums[i].inter.high, display_buffer, sizeof(display_buffer));
+        std::cout << display_buffer << "] \n";
     }
     std::cout << "=============================================================\n";
 
