@@ -476,7 +476,7 @@ void DF3_diag(double_num* ret, double_num* tab) {
 void (*func[])(double_num*, double_num*) = { F1, F2, F3 };
 void (*dfunc[])(double_num*, double_num*) = { DF1_diag, DF2_diag, DF3_diag };
 
-int main() {
+int main9() {
    // startCPP();
     SetX87Precision(PREC_EXTENDED);
     ClearX87Errors();

@@ -1,7 +1,8 @@
-#include "Windows.h"
 #include "resource.h"
+#include "main.h"
 #include "math_core.h"
 #include <string>
+#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 extern "C" {
 	mode software_mode = pure_interval;
@@ -13,14 +14,97 @@ void (**func)(double_num* ret, double_num* tab);
 void (**dfunc)(double_num* ret, double_num* tab);
 int mit = 0;
 extended_double eps;
+double_num omega;
+
+bool is_eps = false;
+bool is_omega = false;
+bool is_mit = false;
 
 std::string* left;
 std::string* right;
 
+double_num* left_ed;
+double_num* right_ed;
+
+HWND hwndDLG;
+
 std::string textBoxContent = "";
 
-void OutputLog(const char* string) {
-	textBoxContent += string;
+bool IsFormatXX_Strict(const char* text) {
+	if (!text || text[0] == L'\0') return false;
+
+	int i = 0;
+
+	// 1. Opcjonalny znak minus
+	if (text[i] == L'-') {
+		i++;
+	}
+
+	// 2. Musi byæ przynajmniej jedna cyfra przed kropk¹
+	if (!iswdigit(text[i])) return false;
+	while (iswdigit(text[i])) {
+		i++;
+	}
+
+	// 3. W tym miejscu MUSI byæ kropka
+	if (text[i] != L'.') return false;
+	i++; // pomiñ kropkê
+
+	// 4. Musi byæ przynajmniej jedna cyfra po kropce
+	if (!iswdigit(text[i])) return false;
+	while (iswdigit(text[i])) {
+		i++;
+	}
+
+	// 5. Jeœli tu nie ma koñca stringa (\0), to znaczy, ¿e s¹ jakieœ œmieci na koñcu
+	return (text[i] == L'\0');
+}
+
+bool IsFormat00_Strict(const char* text) {
+	if (!text || text[0] == L'\0') return false;
+
+	int i = 0;
+
+	// 1. Opcjonalny znak minus
+	if (text[i] == L'-') {
+		i++;
+	}
+
+	// 2. Musi byæ przynajmniej jedna cyfra przed kropk¹
+	if (text[i]!='0') return false;
+	while (text[i]=='0') {
+		i++;
+	}
+
+	// 3. W tym miejscu MUSI byæ kropka
+	if (text[i] != L'.') return false;
+	i++; // pomiñ kropkê
+
+	// 4. Musi byæ przynajmniej jedna cyfra po kropce
+	if (text[i]!='0') return false;
+	while (text[i]=='0') {
+		i++;
+	}
+
+	// 5. Jeœli tu nie ma koñca stringa (\0), to znaczy, ¿e s¹ jakieœ œmieci na koñcu
+	return (text[i] == L'\0');
+}
+
+void OutputLog(const char* newText) {
+	HWND hEdit = GetDlgItem(hwndDLG, IDC_EDIT1);
+	if (!hEdit) return;
+
+	// 1. ZnajdŸ koniec tekstu
+	int len = GetWindowTextLengthA(hEdit);
+
+	// 2. Ustaw zaznaczenie na sam koniec (pusta selekcja)
+	SendMessageA(hEdit, EM_SETSEL, len, len);
+
+	// 3. Wklej nowy tekst w miejsce zaznaczenia (czyli na koniec)
+	SendMessageA(hEdit, EM_REPLACESEL, FALSE, (LPARAM)newText);
+
+	// 4. Teraz kursor fizycznie przemieœci³ siê w dó³, wiêc rozkaz przewiniêcia zadzia³a natychmiast!
+	SendMessageA(hEdit, EM_SCROLLCARET, 0, 0);
 }
 //extern "C" mode software_mode;      // common dialog box structure
 
@@ -69,6 +153,8 @@ void ZaalokujTabliceFunkcji(int liczbaFunkcji) {
 
 	left = new std::string[liczbaFunkcji];
 	right = new std::string[liczbaFunkcji];
+	left_ed = new double_num[liczbaFunkcji];
+	right_ed = new double_num[liczbaFunkcji];
 
 	// Teraz mo¿esz dynamicznie przypisywaæ funkcje pod indeksy:
 	// func[0] = MojaFunkcja;
@@ -80,6 +166,8 @@ void ZwolnijPamiec() {
 	delete[] dfunc;
 	delete[] right;
 	delete[] left;
+	delete[] left_ed;
+	delete[] right_ed;
 }
 
 void UpdateInputLabel(HWND hwndDlg) {
@@ -96,6 +184,7 @@ void UpdateInputLabel(HWND hwndDlg) {
 }
 
 LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	hwndDLG = hwndDlg;
 	switch (uMsg) {
 		case WM_INITDIALOG:
 		{
@@ -109,27 +198,69 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 		}
 		case WM_COMMAND:
 		{
-			SetDlgItemTextA(hwndDlg, IDC_EDIT1, textBoxContent.c_str());
-			OutputLog("Pisze\r\n");
+
+			// 4. KROK KRYTYCZNY: Przesuwasz kursor na sam koniec (od len do len)
+			//SendMessageA(hEdit, EM_SETSEL, len, len);
+			//SendMessageA(hEdit, EM_SCROLLCARET, 0, 0);
+			//OutputLog("Pisze\r\n");
 			switch (LOWORD(wParam))
 			{
-				case IDC_RADIO1:
+			case IDC_RADIO1: {
+				if (HIWORD(wParam) == BN_CLICKED) {
 					software_mode = float80;
+					extended_double num;
+					M_Mid(&omega, &num);
+					M_LoadNum(&num, &omega);
 					EnableWindow(GetDlgItem(hwndDlg, IDC_EDIT3), FALSE);
-					break;
+					OutputLog("Mode set to flat floating point mode.\r\n");
 
-				case IDC_RADIO2:
+				}
+				break;
+			}
+
+			case IDC_RADIO2: {
+				if (HIWORD(wParam) == BN_CLICKED) {
 					software_mode = interval_float_data;
+					extended_double num;
+					M_Mid(&omega, &num);
+					M_LoadNum(&num, &omega);
 					EnableWindow(GetDlgItem(hwndDlg, IDC_EDIT3), FALSE);
-					break;
-				case IDC_RADIO3:
+					OutputLog("Mode set to interval mode, with singular inputs\r\n");
+				}
+				break;
+			}
+			case IDC_RADIO3: {
+				if (HIWORD(wParam) == BN_CLICKED) {
 					software_mode = pure_interval;
+					extended_double num;
+					M_Mid(&omega, &num);
+					M_LoadNum(&num, &omega);
 					EnableWindow(GetDlgItem(hwndDlg, IDC_EDIT3), TRUE);
-					break;
+					OutputLog("Mode set to interval mode, with interval inputs\r\n");
+				}
+				break;
+			}
 
-				case IDC_BUTTON1:
-					MessageBox(hwndDlg, "Calculate button clicked!", "Info", MB_OK);
+			case IDC_BUTTON1: {
+				if (!is_dll_loaded) {
+					MessageBox(hwndDlg, "No proper DLL is loaded.", "Error", MB_OK | MB_ICONERROR);
 					break;
+				}
+				if (!is_eps) {
+					MessageBox(hwndDlg, "No EPS is given.", "Error", MB_OK | MB_ICONERROR);
+					break;
+				}
+				if (!is_mit) {
+					MessageBox(hwndDlg, "No MIT is given.", "Error", MB_OK | MB_ICONERROR);
+					break;
+				}
+				if (!is_omega) {
+					MessageBox(hwndDlg, "No omega is given.", "Error", MB_OK | MB_ICONERROR);
+					break;
+				}
+				MessageBoxA(hwndDlg, "Hello. Trying to calculate", "", 0);
+				break;
+			}
 				case IDC_BUTTON2: {
 					//GetOpenFileNameA()
 					std::string dllPath = OtworzPlikWinAPI(hwndDlg);
@@ -165,6 +296,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						FARPROC funcPtr = GetProcAddress(loaded_dll, funcName.c_str());
 						if (!funcPtr) {
 							MessageBox(hwndDlg, ("Failed to find " + funcName + " in DLL!").c_str(), "Error", MB_OK | MB_ICONERROR);
+							is_dll_loaded = false;
 							FreeLibrary(loaded_dll);
 							loaded_dll = NULL;
 							return TRUE;
@@ -174,6 +306,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						FARPROC dfuncPtr = GetProcAddress(loaded_dll, dfuncName.c_str());
 						if (!dfuncPtr) {
 							MessageBox(hwndDlg, ("Failed to find " + dfuncName + " in DLL!").c_str(), "Error", MB_OK | MB_ICONERROR);
+							is_dll_loaded = false;
 							FreeLibrary(loaded_dll);
 							loaded_dll = NULL;
 							return TRUE;
@@ -222,7 +355,67 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						GetDlgItemTextA(hwndDlg, IDC_EDIT_MIT, text, 50);
 						mit = atoi(text);
 						if (mit <= 0) {
-							MessageBox(hwndDlg, "MIT should a number", "Error", MB_ICONERROR);
+							MessageBox(hwndDlg, "MIT should be an integer number", "Error", MB_ICONERROR);
+						}
+						else {
+							_itoa_s(mit, text, 50, 10);
+							OutputLog("Loaded value ");
+							OutputLog(text);
+							OutputLog(" as MIT\r\n");
+							is_mit = true;
+						}
+						//right[cur_pos - 1] = text;
+					}
+					break;
+				}
+				case IDC_EDIT_EPS:
+				{
+					if (HIWORD(wParam) == EN_KILLFOCUS) {
+						CHAR text[50];
+						GetDlgItemTextA(hwndDlg, IDC_EDIT_EPS, text, 50);
+						//mit = atoi(text);
+						if (!IsFormatXX_Strict(text) || text[0]=='-' || IsFormat00_Strict(text)) {
+							MessageBox(hwndDlg, "EPS should be a positive float number. Like 1.0 or 0.00001.", "Error", MB_ICONERROR);
+						}
+						else {
+							ED_FromString(&eps, text, strlen(text)+1);
+							OutputLog("Loaded value ");
+							// M_Mid(&omega, &num);
+							ED_ToStringScientific(&eps, text, 50);
+							OutputLog(text);
+							OutputLog(" as EPS.\r\n");
+							is_eps = true;
+						}
+						//right[cur_pos - 1] = text;
+					}
+					break;
+				}
+				case IDC_EDIT_OMEGA:
+				{
+					if (HIWORD(wParam) == EN_KILLFOCUS) {
+						CHAR text[50];
+						GetDlgItemTextA(hwndDlg, IDC_EDIT_OMEGA, text, 50);
+						//mit = atoi(text);
+						if (!IsFormatXX_Strict(text)) {
+							MessageBox(hwndDlg, "Omega should be a float number between 0 and 2.", "Error", MB_ICONERROR);
+						}
+						else {
+							double val = atof(text);
+							// Bezwzglêdna kontrola granic zbie¿noœci Newtona-Gaussa-Seidela
+							if (val <= 0.0 || val >= 2.0) {
+								MessageBoxA(hwndDlg, "Omega must be strictly between 0 and 2 (0 < omega < 2)!", "Convergence Error", MB_ICONERROR);
+							}
+							else {
+								extended_double num;
+								ED_FromString(&num, text, strlen(text) + 1);
+								M_LoadNum(&num, &omega);
+								OutputLog("Loaded value ");
+								// M_Mid(&omega, &num);
+								ED_ToStringScientific(&num, text, 50);
+								OutputLog(text);
+								OutputLog(" as omega.\r\n");
+								is_omega = true;
+							}
 						}
 						//right[cur_pos - 1] = text;
 					}
@@ -240,7 +433,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return FALSE;
 }
 
-int main9() {
+int main() {
 
 	HINSTANCE hInstance = GetModuleHandleA(NULL);
 	DialogBoxParamA(hInstance, MAKEINTRESOURCEA(IDD_DIALOG1), NULL, DialogProc, 0);
