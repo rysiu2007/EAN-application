@@ -415,6 +415,7 @@ ED_ToStringScientific proc
     or r11, r10                  ; Jeśli mantysa i wykładnik == 0, liczba to 0.0
     jnz not_zero
     
+force_zero:                      ; Awaryjny skok dla liczb zbyt bliskich zeru
     ; Jeśli liczba to 0.0, wpisujemy na sztywno "0.0E+0"
     mov byte ptr [rdx], '0'
     mov byte ptr [rdx+1], '.'
@@ -427,7 +428,7 @@ ED_ToStringScientific proc
 
 not_zero:
     ; --- 2. OBSŁUGA ZNAKU LICZBY ---
-    fld tbyte ptr [rcx]          ; Ładujemy liczbę na FPU
+    fld tbyte ptr [rcx]          ; Ładujemy liczbę na FPU -> st(0) = liczba
     
     movzx r10d, word ptr [rcx+8] 
     test r10d, 8000h             ; Czy bit znaku jest ustawiony?
@@ -441,7 +442,7 @@ not_zero:
 
 positive:
     ; Zapisujemy czystą dodatnią liczbę do [rbp-40]
-    fstp tbyte ptr [rbp-40] 
+    fstp tbyte ptr [rbp-40]      ; Zdejmujemy z FPU -> STOS JEST PUSTY
 
     ; --- 3. WYCIĄGNIĘCIE WYKŁADNIKA DZIESIĘTNEGO ---
     fstcw [rbp-8]
@@ -453,33 +454,40 @@ positive:
 
     fldlg2                       ; st(0) = log10(2)
     fld tbyte ptr [rbp-40]      
-    fyl2x                        ; st(0) = log10(|liczba|) = Y
+    fyl2x                        ; st(0) = log10(|liczba|). STOS MA 1 ELEMENT.
 
-    fld st(0)               
-    fistp qword ptr [rbp-24]     ; [rbp-24] = prawidłowy wykładnik dziesiętny
-    ; ... (Koniec Fazy 1: Wykładnik dziesiętny jest już w [rbp-24]) ...
-    fldcw [rbp-8]               ; Przywracamy domyślny tryb FPU
-    fstp st(0)                  ; Czyścimy stos FPU z pozostałości logarytmu
+    fld st(0)                    ; st(0) = log10, st(1) = log10. STOS MA 2 ELEMENTY.
+    fistp qword ptr [rbp-24]     ; Zdejmuje st(0). [rbp-24] = wykładnik. STOS MA 1 ELEMENT.
+    
+    fldcw [rbp-8]                ; Przywracamy domyślny tryb FPU
+    fstp st(0)                   ; Zdejmujemy ostatni element logarytmu. STOS JEST IDEALNIE PUSTY!
+
+    ; --- ZABEZPIECZENIE ANTY-FREEZE ---
+    ; Sprawdzamy, czy FPU dla liczby bliskiej zera nie zwróciło błędu -inf (Integer Indefinite)
+    mov rax, [rbp-24]
+    mov r11, 8000000000000000h   ; Bitowy wzorzec błędu rzutowania dla fistp
+    cmp rax, r11
+    je force_zero                ; Jeśli to podpróg zera, natychmiast uciekamy do "0.0E+0"
 
     ; Przygotowujemy stałą 10 w pamięci RAM na stosie
     mov qword ptr [rbp-88], 10
 
     ; --- 4. FAZA 2: SKALOWANIE ORYGINALNEJ LICZBY ---
-    fld tbyte ptr [rbp-40]      ; Ładujemy ORYGINALNĄ dodatnią liczbę (np. 16.0)
+    fld tbyte ptr [rbp-40]      ; Ładujemy ORYGINALNĄ dodatnią liczbę -> STOS MA 1 ELEMENT
     
     mov rcx, [rbp-24]           ; RCX = nasz wykładnik dziesiętny E
     test rcx, rcx
-    jz scale_done               ; Jeśli E == 0, liczba jest już w przedziale [1, 10)
+    jz scale_validate           ; Jeśli E == 0, liczba jest już w przedziale [1, 10)
     jns scale_down              ; Jeśli E > 0, musimy ją zmniejszyć (dzielić przez 10)
 
     ; Jeśli E < 0, musimy ją zwiększyć (mnożyć przez 10)
     neg rcx                     ; Zmieniamy znak na dodatni do pętli
 scale_up_loop:
-    fild qword ptr [rbp-88]     ; st(0) = 10.0 (załadowane z pamięci), st(1) = liczba
+    fild qword ptr [rbp-88]     ; st(0) = 10.0, st(1) = liczba
     fmulp st(1), st(0)          ; st(0) = liczba * 10
     dec rcx
     jnz scale_up_loop
-    jmp scale_done
+    jmp scale_validate
 
 scale_down:
 scale_down_loop:
@@ -488,11 +496,36 @@ scale_down_loop:
     dec rcx
     jnz scale_down_loop
 
+scale_validate:
+    ; --- PANCERNA WALIDACJA GRANICZNA ---
+    ; Sprawdzamy bezpiecznie na FPU za pomocą fcomi, czy mantysa nie uciekła do 10.0
+    fild qword ptr [rbp-88]     ; st(0) = 10.0, st(1) = nasza_mantysa
+    fcomi st(0), st(1)          ; Porównaj 10.0 z mantysą
+    fstp st(0)                  ; Zdejmij 10.0 ze stosu
+    ja scale_too_small          ; Jeśli 10.0 > mantysa, to jest ok, sprawdź dół
+
+    ; Jeśli mantysa >= 10.0 (naprawiamy błąd zaokrąglenia logarytmu)
+    fild qword ptr [rbp-88]
+    fdivp st(1), st(0)          ; Dzielimy mantysę przez 10
+    inc qword ptr [rbp-24]      ; Zwiększamy wykładnik o 1
+    jmp scale_done
+
+scale_too_small:
+    ; Sprawdzamy, czy mantysa nie spadła poniżej 1.0
+    fld1                        ; st(0) = 1.0, st(1) = nasza_mantysa
+    fcomi st(0), st(1)          ; Porównaj 1.0 z mantysą
+    fstp st(0)                  ; Zdejmij 1.0
+    jb scale_done               ; Jeśli 1.0 < mantysa, przedział [1, 10) jest zachowany
+
+    ; Jeśli mantysa < 1.0 (rzadki przypadek graniczny)
+    fild qword ptr [rbp-88]
+    fmulp st(1), st(0)          ; Mnożymy mantysę przez 10
+    dec qword ptr [rbp-24]      ; Zmniejszamy wykładnik o 1
+
 scale_done:
-    ; ... (Dalsza część funkcji BCD i wypisywania wykładnika bez zmian) ...
-    ; W tym momencie w st(0) znajduje się matematycznie IDEALNA mantysa (np. dokładnie 1.6)
-    ; Zapisujemy ją pod [rbp-40]
-    fstp tbyte ptr [rbp-40] 
+    ; W tym momencie na stosie FPU znajduje się dokładnie JEDEN element (idealna mantysa)
+    ; Zapisujemy ją pod [rbp-40], co czyści FPU do zera przed wejściem do BCD
+    fstp tbyte ptr [rbp-40]     ; STOS FPU JEST IDEALNIE PUSTY
 
     ; --- 5. BEZPIECZNE WYWOŁANIE BCD ---
     mov [rbp-48], rdx            
@@ -502,7 +535,7 @@ scale_done:
     mov r8, 21                   
     call ED_ToStringBCD     
 
-    ; Odzyskujemy wskaźniki
+    ; Odzyskujemy wskaźniki bufora tekstowego
     mov rcx, [rbp-48]            
     add rcx, 21                  ; BCD wpisało dokładnie 20 znaków
 
@@ -514,16 +547,16 @@ scale_done:
     mov rax, [rbp-24]            
     
     test rax, rax
-    js exp_neg
+    jns exp_positive
     
-    mov byte ptr [rcx], '+'
-    inc rcx
-    jmp prep_div
-
-exp_neg:
     mov byte ptr [rcx], '-'
     inc rcx
-    neg rax                      
+    neg rax                      ; Zamieniamy wykładnik na dodatni do wyświetlenia
+    jmp prep_div
+
+exp_positive:
+    mov byte ptr [rcx], '+'
+    inc rcx
 
 prep_div:
     mov r8, rcx                  ; R8 = nasz aktywny wskaźnik w buforze głównym
@@ -534,7 +567,7 @@ prep_div:
 div_loop:
     xor rdx, rdx            
     div r10                      
-    add dl, '0'             
+    add dl, '0'              
     dec r9
     mov [r9], dl                 
     inc r11
