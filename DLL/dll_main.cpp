@@ -5,12 +5,17 @@ void MakeDoubleNum(double_num* dest, const char* str) {
     extended_double temp_ed;
 
     // 1. Twój parser robi bezpieczn¹ konwersjê string -> float80
-    ED_FromString(&temp_ed, str, static_cast<int>(strlen(str)));
+    ED_FromString(&temp_ed, str, 1+static_cast<int>(strlen(str)));
 
     // 2. £adujemy to do unii (gdzie software_mode ustawi odpowiednio FPU / Interwa³)
     M_LoadNum(&temp_ed, dest);
 }
 extern "C" {
+    const double_num c2 = {
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x40, // .low
+          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x40
+    };
+    const extended_double _4 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0x40 };
     __declspec(dllexport) void SetMode(mode soft_mode) {
         software_mode = soft_mode;
     }
@@ -22,9 +27,12 @@ extern "C" {
     __declspec(dllexport)void f1(double_num* ret, double_num* tab) {
         double_num* x = &tab[0], * y = &tab[1], * z = &tab[2];
         double_num x2, cx2, sum1;
-        double_num c2; MakeDoubleNum(&c2, "2.0");
+      //  double_num c2; //MakeDoubleNum(&c2, "2.0");
+       // M_LoadNum(&_2, &c2);
+     //   extended_double e;
+       // M_Mid(&c2, &e);
 
-        M_Mul(x, x, &x2);
+        M_PowInt(x, &c2.inter.high, &x2);
         M_Mul(&c2, &x2, &cx2); // 2 * x^2
         M_Add(&cx2, y, &sum1); // 2 * x^2 + y
         M_Add(&sum1, z, ret);  // 2 * x^2 + y + z
@@ -34,7 +42,7 @@ extern "C" {
     __declspec(dllexport) void f2(double_num* ret, double_num* tab) {
         double_num* x = &tab[0], * y = &tab[1], * z = &tab[2];
         double_num xy, sub1;
-        double_num c2; MakeDoubleNum(&c2, "2.0");
+       // double_num c2;  M_LoadNum(&_2, &c2);
 
         M_Mul(x, y, &xy);     // x * y
         M_Sub(&xy, z, &sub1); // x * y - z
@@ -53,7 +61,7 @@ extern "C" {
 
     // dF1/dx = 4x
     __declspec(dllexport) void df1(double_num* ret, double_num* tab) {
-        double_num c4; MakeDoubleNum(&c4, "4.0");
+        double_num c4; M_LoadNum(&_4, &c4);
         M_Mul(&c4, &tab[0], ret);
     }
 

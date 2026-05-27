@@ -401,12 +401,16 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 				ED_ToStringScientific(&temp, text, 50);
 				OutputLog(text);
 				OutputLog(".\r\n");
+				//ClearX87Errors();
 				SimplifiedNewton(num, left_ed, func, dfunc, &omega, mit, &eps);
 				UpdateInputLabel(hwndDlg);
 				FreeModule(loaded_dll);
 				is_dll_loaded = false;
 				if (GetX87Errors() & (ERR_ZERO_DIVIDE | ERR_INVALID_OP)) {
-					OutputLog("There were some critical errors, or Newton was not convergent. Try with different data.\r\n");
+					OutputLog("There were some critical errors, or Newton was not convergent. Try with different data. Error code: 0x");
+					_itoa_s(GetX87Errors(), text, 50, 16);
+					OutputLog(text);
+					OutputLog(".\r\n");
 					break;
 				}
 				OutputLog("Results:\r\n");
@@ -433,7 +437,12 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						OutputLog(";");
 						ED_ToStringScientific(&left_ed[i].inter.high, text, 35);
 						OutputLog(text);
-						OutputLog("]\r\n");
+						OutputLog("], width=");
+
+						Int_Width(&left_ed[i].inter, &temp);
+						ED_ToStringScientific(&temp, text, 10);
+						OutputLog(text);
+						OutputLog("\r\n");
 					}
 				}
 				//MessageBoxA(hwndDlg, "Hello. Trying to calculate", "", 0);
@@ -504,9 +513,15 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					UpdateInputLabel(hwndDlg);
 					break;
 				}
-				case IDC_BUTTON3:
-					MessageBox(hwndDlg, "Manual button clicked!", "Info", MB_OK);
+				case IDC_BUTTON3: {
+					extended_double e;
+					ED_FromString(&e, "-1.000000000001", 14);
+					char text2[30]{};
+					ED_ToStringBCD(&e, text2, 15);
+					OutputLog(text2);
+					OutputLog("\r\n");
 					break;
+				}
 				case IDC_BUTTON4:
 					if (cur_pos > 1) {
 						cur_pos--;
@@ -570,7 +585,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 							ED_FromString(&eps, text, strlen(text)+1);
 							OutputLog("Loaded value ");
 							// M_Mid(&omega, &num);
-							ED_ToStringScientific(&eps, text, 50);
+							ED_ToStringScientific(&eps, text,50);
 							OutputLog(text);
 							OutputLog(" as EPS.\r\n");
 							is_eps = true;

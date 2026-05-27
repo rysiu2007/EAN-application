@@ -4,6 +4,7 @@
 
 #pragma pack(push, 1)
 union double_num {
+	unsigned char bytes[20];
 	extended_double num;
 	interval inter;
 };

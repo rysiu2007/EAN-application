@@ -220,7 +220,7 @@ ED_ToString endp
 ED_ToStringBCD proc
 	push r12
 	push r13
-	sub rsp, 56
+	sub rsp, 128
 
 	push rcx
 	mov rcx, 3
@@ -322,7 +322,7 @@ ED_ToStringBCD proc
 	fbld tbyte ptr [rsp+32]
 	fsubp st(1), st(0)
 		; TODO wypisz część po przecinku, 18 cyfr
-	
+
 	xor r12, r12
 	xor r13, r13
 	write_loop2:
@@ -338,13 +338,13 @@ ED_ToStringBCD proc
 			mov [rdx], ah
 			inc rdx
 			dec r8
-			jz fines2
+			jz fines3
 
 		write_al2:
 			mov [rdx], al
 			inc rdx
 			dec r8
-			jz fines2
+			jz fines3
 
 		cmp r12, -8
 		jge write_loop2
@@ -391,21 +391,37 @@ ED_ToStringBCD proc
 	fstp st(0)
 	mov rcx, 0
 	call SetX87Rounding
-	add rsp,56
+	add rsp,128
 	pop r13
 	pop r12
 	ret
+
+	fines3:
+	fstp st(0)
+	jmp fines2
 
 ED_ToStringBCD endp
 
 ED_ToStringScientific proc
     push rbp
     mov rbp, rsp
+	cld
     ; Alokujemy 112 bajtów (wielokrotność 16), zapewniając brak nakładania się zmiennych
-    sub rsp, 112             
+    sub rsp, 112     
+	push rcx
+	mov rcx, 3
+	call SetX87Rounding
+	pop rcx
+	
+	cmp r8, 9
+	jl end_p
     
-    cmp r8, 30
-    jl end_p
+    cmp r8, 27
+	jle continue
+	mov r8, 27
+
+	continue:
+    ;jl end_p
 
     ; --- 1. SPRAWDZENIE CZY LICZBA TO ZERO ---
     mov rax, qword ptr [rcx]     ; Dolne 8 bajtów mantysy
@@ -532,12 +548,14 @@ scale_done:
     mov [rbp-56], r8             
 
     lea rcx, [rbp-40]            
-    mov r8, 21                   
+    sub r8, 6                   
     call ED_ToStringBCD     
 
     ; Odzyskujemy wskaźniki bufora tekstowego
-    mov rcx, [rbp-48]            
-    add rcx, 21                  ; BCD wpisało dokładnie 20 znaków
+    mov rcx, [rbp-48]
+	mov r8, [rbp-56]
+	sub r8, 6	
+    add rcx, r8                  ; BCD wpisało dokładnie 20 znaków
 
     ; Dopisujemy 'E'
     mov byte ptr [rcx], 'E' 
@@ -586,6 +604,8 @@ copy_exp_loop:
     mov byte ptr [r8], 0         
 
 end_p:
+	mov rcx, 0
+	call SetX87Rounding
     mov rsp, rbp
     pop rbp
     ret
