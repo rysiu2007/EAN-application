@@ -13,6 +13,7 @@ extern "C" {
 }
 bool is_dll_loaded = false;
 HMODULE loaded_dll = NULL;
+std::string dllPath;
 int num = 0, cur_pos = 0;
 void (**func)(double_num* ret, double_num* tab);
 void (**dfunc)(double_num* ret, double_num* tab);
@@ -321,9 +322,57 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						OutputLog("]\r\n");
 					}
 				}
+				//loaded_dll = LoadLibraryExA(dllPath.c_str(), NULL, 0);
+				//{
+				//	if (!loaded_dll) {
+				//		MessageBox(hwndDlg, "Failed to load DLL!", "Error", MB_OK | MB_ICONERROR);
+				//		throw;
+				//	}
+				//	setMode = GetProcAddress(loaded_dll, "SetMode"); // Przyk³adowa funkcja, któr¹ chcemy za³adowaæ
+				//	if (!setMode) {
+				//		MessageBox(hwndDlg, "Failed to find SetMode in DLL!", "Error", MB_OK | MB_ICONERROR);
+				//		FreeLibrary(loaded_dll);
+				//		loaded_dll = NULL;
+				//		throw;
+				//	}
+
+				//	FARPROC getNum = GetProcAddress(loaded_dll, "GetNum"); // Przyk³adowa funkcja, któr¹ chcemy za³adowaæ
+				//	if (!getNum) {
+				//		MessageBox(hwndDlg, "Failed to find GetNum in DLL!", "Error", MB_OK | MB_ICONERROR);
+				//		FreeLibrary(loaded_dll);
+				//		loaded_dll = NULL;
+				//		throw;
+				//	}
+				//}
+
 //				FARPROC setMode = GetProcAddress(loaded_dll, "SetMode");
 				((void(*)(int))setMode)(software_mode);
 				CHAR text[50];
+
+				
+
+			/*	for (int i = 1; i <= num; ++i) {
+					std::string funcName = "f" + std::to_string(i);
+					FARPROC funcPtr = GetProcAddress(loaded_dll, funcName.c_str());
+					if (!funcPtr) {
+						MessageBox(hwndDlg, ("Failed to find " + funcName + " in DLL!").c_str(), "Error", MB_OK | MB_ICONERROR);
+						is_dll_loaded = false;
+						FreeLibrary(loaded_dll);
+						loaded_dll = NULL;
+						throw;
+					}
+					func[i - 1] = (void (*)(double_num*, double_num*))funcPtr;
+					std::string dfuncName = "df" + std::to_string(i);
+					FARPROC dfuncPtr = GetProcAddress(loaded_dll, dfuncName.c_str());
+					if (!dfuncPtr) {
+						MessageBox(hwndDlg, ("Failed to find " + dfuncName + " in DLL!").c_str(), "Error", MB_OK | MB_ICONERROR);
+						is_dll_loaded = false;
+						FreeLibrary(loaded_dll);
+						loaded_dll = NULL;
+						throw;
+					}
+					dfunc[i - 1] = (void (*)(double_num*, double_num*))dfuncPtr;
+				}*/
 				
 				OutputLog("Running SimplifiedNewton in ");
 				switch (software_mode)
@@ -353,6 +402,9 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 				OutputLog(text);
 				OutputLog(".\r\n");
 				SimplifiedNewton(num, left_ed, func, dfunc, &omega, mit, &eps);
+				UpdateInputLabel(hwndDlg);
+				FreeModule(loaded_dll);
+				is_dll_loaded = false;
 				if (GetX87Errors() & (ERR_ZERO_DIVIDE | ERR_INVALID_OP)) {
 					OutputLog("There were some critical errors, or Newton was not convergent. Try with different data.\r\n");
 					break;
@@ -391,7 +443,7 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 				case IDC_BUTTON2: {
 					//GetOpenFileNameA()
-					std::string dllPath = OtworzPlikWinAPI(hwndDlg);
+					dllPath = OtworzPlikWinAPI(hwndDlg);
 					loaded_dll = LoadLibraryExA(dllPath.c_str(), NULL, 0);
 					if (!loaded_dll) {
 						MessageBox(hwndDlg, "Failed to load DLL!", "Error", MB_OK | MB_ICONERROR);
@@ -422,7 +474,9 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 						loaded_dll = NULL;
 						break;
 					}
-
+					if (dfunc) {
+						ZwolnijPamiec();
+					}
 					ZaalokujTabliceFunkcji(num);
 					is_dll_loaded = true;
 					for (int i = 1; i <= num; ++i) {
