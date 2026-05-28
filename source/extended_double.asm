@@ -929,6 +929,20 @@ ED_PrevMachine proc
 	push rbx
 	mov rax, qword ptr [rcx]
 	mov bx, word ptr [rcx+8]
+
+	; --- PRZYPADEK SZCZEGÓLNY: TEST NA CZYSTE ZERO (20 ZER W HEX) ---
+	or rax, rax                 ; Sprawdź czy mantysa to 0
+	jnz oryginalny_kod          ; Jeśli mantysa != 0, leć normalnie
+	cmp bx, 0000h               ; Sprawdź czy wykładnik i znak to 0
+	jnz oryginalny_kod          ; Jeśli wykładnik != 0, leć normalnie
+
+	; Jeśli tu dotarliśmy, na wejściu było dokładnie 0.0
+	mov rax, 1                  ; Ustaw najniższy bit mantysy
+	mov bx, 8000h               ; Ustaw bit znaku na minus
+	jmp store                   ; Skocz prosto do zapisu, omijając operacje dec/inc
+	; ----------------------------------------------------------------
+oryginalny_kod:
+
 	test bx, 8000h
 	jnz neg2
 	
