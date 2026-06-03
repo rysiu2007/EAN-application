@@ -431,15 +431,35 @@ ED_ToStringScientific proc
     or r11, r10                  ; Jeśli mantysa i wykładnik == 0, liczba to 0.0
     jnz not_zero
     
-force_zero:                      ; Awaryjny skok dla liczb zbyt bliskich zeru
-    ; Jeśli liczba to 0.0, wpisujemy na sztywno "0.0E+0"
+force_zero:                      ; Awaryjny skok dla liczb zbyt bliskich zeru oraz dla 0.0
+    ; Na wejściu:
+    ; rdx = aktualny adres w buforze (jeśli liczba była ujemna, '-' już tam jest i rdx jest przesunięty!)
+    ; r8  = aktualna wartość limitu znaków/precyzji
+
+    mov rcx, r8
+    sub rcx, 6                   ; rcx = łączna liczba znaków przed 'E' (mantysa wraz z kropką)
+
+    ; 1. Wpisujemy początek znormalizowanej mantysy: "0." (zajmuje dokładnie 2 znaki)
     mov byte ptr [rdx], '0'
     mov byte ptr [rdx+1], '.'
+    add rdx, 2
+
+    ; 2. Obliczamy ile zer musimy dopisać po kropce
+    sub rcx, 2                   ; Odejmujemy 2 znaki, które przed chwilą wpisaliśmy ("0.")
+    jle append_exponent          ; Zabezpieczenie, jeśli rcx spadłby do zera (dla bardzo małych r8)
+
+zero_mantissa_loop:
+    mov byte ptr [rdx], '0'      ; Dopisujemy kolejne zera po kropce
+    inc rdx
+    dec rcx
+    jnz zero_mantissa_loop
+
+append_exponent:
+    ; 3. Dopisujemy idealnie dopasowaną końcówkę wykładnika oraz terminator NULL
+    mov byte ptr [rdx], 'E'
+    mov byte ptr [rdx+1], '+'
     mov byte ptr [rdx+2], '0'
-    mov byte ptr [rdx+3], 'E'
-    mov byte ptr [rdx+4], '+'
-    mov byte ptr [rdx+5], '0'
-    mov byte ptr [rdx+6], 0
+    mov byte ptr [rdx+3], 0      ; Koniec stringa (\0)
     jmp end_p
 
 not_zero:
@@ -531,7 +551,7 @@ scale_too_small:
     fld1                        ; st(0) = 1.0, st(1) = nasza_mantysa
     fcomi st(0), st(1)          ; Porównaj 1.0 z mantysą
     fstp st(0)                  ; Zdejmij 1.0
-    jb scale_done               ; Jeśli 1.0 < mantysa, przedział [1, 10) jest zachowany
+    jbe scale_done               ; Jeśli 1.0 < mantysa, przedział [1, 10) jest zachowany
 
     ; Jeśli mantysa < 1.0 (rzadki przypadek graniczny)
     fild qword ptr [rbp-88]

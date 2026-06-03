@@ -250,7 +250,8 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 			case IDC_BUTTON1: {
 				ClearX87Errors();
-				// _fpreset();
+				 _fpreset();
+				 SetX87Precision(PREC_EXTENDED);
 				if (!is_dll_loaded) {
 					MessageBox(hwndDlg, "No proper DLL is loaded.", "Error", MB_OK | MB_ICONERROR);
 					break;

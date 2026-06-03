@@ -16,17 +16,17 @@ SimplifiedNewton_Point proc
 	push rsi
 	push rdi
 	push rbp
-	sub rsp, 120
+	sub rsp, 160
 	mov rbx, rcx
 	mov r13, rdx
 	mov r14, r8
 	mov rbp, r9
 	;mov r15, r9
-	mov r12, [rsp+120+8+8+8+8+8+8+8+32+8+8+48+8] ; mit
+	mov r12, [rsp+160+8+8+8+8+8+8+8+32+8+8+48+8] ; mit
 	main_loop:
 		fldz
 		fstp tbyte ptr [rsp+96]
-	;	int 3
+		;int 3
 		push rbx
 
 		mov rsi, r14
@@ -52,21 +52,30 @@ SimplifiedNewton_Point proc
 			lea rcx, [rsp+48]
 			lea rdx, [rsp+72]
 			lea r8, [rsp+48]
-			call ED_Div
+			call M_Div
 
 			lea rcx, [rsp+48]
-			mov rdx, [rsp+120+8+8+8+8+8+8+8+32+8+8+48+8]; omega
+			mov rdx, [rsp+160+8+8+8+8+8+8+8+32+8+8+48+8]; omega
 			lea r8, [rsp+48]
-			call ED_Mul
+			call M_Mul
 
 
 			lea rcx, [r15]
 			lea rdx, [rsp+48]
 			lea r8, [r15]	;Should save it in a different place but for a prototype i think its ok
-			call ED_Sub
+			call M_Sub
 			;int 3
+
+			;lea rcx, [rsp+96+8]
+			;lea rdx, [rsp+116+8]
+			;call M_Mid
+
+			lea rcx, [rsp+48]
+			lea rdx, [rsp+126+8]
+			call M_Mid
+
 			fld tbyte ptr [rsp+96+8]
-			fld tbyte ptr [rsp+48]
+			fld tbyte ptr [rsp+126+8]
 			fabs
 			fcomi st(0), st(1)
 			fcmovb st(0), st(1)
@@ -77,10 +86,13 @@ SimplifiedNewton_Point proc
 			dec rbx
 		jnz iter_loop
 		pop rbx
-		mov rdx, [rsp+120+8+8+8+8+8+8+8+32+8+8+8 + 48+8]
+		mov rdx, [rsp+160+8+8+8+8+8+8+8+32+8+8+8 + 48+8]
 		fld tbyte ptr [rdx] ; eps
 	;	int 3
 		;int 3
+		;lea rcx, [rsp+96]
+		;lea rdx, [rsp+116]
+		;call M_Mid
 		fld tbyte ptr [rsp+96]
 		fcomi st(0), st(1)
 		fstp st(0)
@@ -97,7 +109,7 @@ SimplifiedNewton_Point proc
 	end_loop:
 	;int 3
 	;mov rax, rdx
-	add rsp, 120
+	add rsp, 160
 	pop rbp
 	pop rdi
 	pop rsi
@@ -348,7 +360,7 @@ SimplifiedNewton proc
     jz @F                       ; Skok do najbli¿szego @@ (Forward)
         
         ; Tryb przedzia³owy
-    call SimplifiedNewton_Interval     ; Sk³ada nazwê np. Int_Add
+    call SimplifiedNewton_Point     ; Sk³ada nazwê np. Int_Add
         jmp ending
         
     @@:
