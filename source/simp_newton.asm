@@ -107,6 +107,11 @@ SimplifiedNewton_Point proc
 ;	error:
 ;	int 3
 	end_loop:
+
+	mov r13, [rsp+160+8+8+8+8+8+8+8+32+8+8+48+8] ;mit
+	sub r13, r12
+	mov rcx, [rsp+160+8+8+8+8+8+8+8+32+8+8+48+8+8+8] ;it
+	mov [rcx], r13
 	;int 3
 	;mov rax, rdx
 	add rsp, 160

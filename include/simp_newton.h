@@ -7,7 +7,7 @@ extern "C" {
 	void SimplifiedNewton(__int64 n, double_num* tab, 
 		void (*func[])(double_num* ret, double_num* tab), 
 		void (*dfunc[])(double_num* ret, double_num* tab), 
-		const double_num* omega, const __int64 mit, const extended_double* eps);
+		const double_num* omega, const __int64 mit, const extended_double* eps, __int64 *it);
 }
 
 

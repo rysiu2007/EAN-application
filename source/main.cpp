@@ -403,7 +403,8 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 				OutputLog(text);
 				OutputLog(".\r\n");
 				//ClearX87Errors();
-				SimplifiedNewton(num, left_ed, func, dfunc, &omega, mit, &eps);
+				long long it;
+				SimplifiedNewton(num, left_ed, func, dfunc, &omega, mit, &eps, &it);
 				UpdateInputLabel(hwndDlg);
 				FreeModule(loaded_dll);
 				is_dll_loaded = false;
@@ -414,7 +415,11 @@ LRESULT CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					OutputLog(".\r\n");
 					break;
 				}
-				OutputLog("Results:\r\n");
+				OutputLog("Program has run through ");
+				_itoa_s(it, text, 50, 10);
+				OutputLog(text);
+
+				OutputLog(" iterations.\r\nResults:\r\n");
 				for (int i = 0; i < num; i++)
 				{
 					CHAR text[35];
